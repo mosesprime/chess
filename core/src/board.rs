@@ -1,17 +1,20 @@
-use self::{piece::{Piece, Side}, square::Square};
+use std::{fmt::{write, Display}, str::FromStr};
 
-mod fen;
+use self::{fen::DEFAULT_FEN_START, piece::{Piece, Side, BLACK_BISHOP_UNICODE, BLACK_KING_UNICODE, BLACK_KNIGHT_UNICODE, BLACK_PAWN_UNICODE, BLACK_QUEEN_UNICODE, BLACK_ROOK_UNICODE, NUM_PIECE_KINDS, NUM_PIECE_SIDES, WHITE_BISHOP_UNICODE, WHITE_KING_UNICODE, WHITE_KNIGHT_UNICODE, WHITE_PAWN_UNICODE, WHITE_QUEEN_UNICODE, WHITE_ROOK_UNICODE}, square::{Square, NUM_BOARD_SQUARES, RANK_NAMES}};
+
+pub mod fen;
 mod piece;
 mod square;
 
 pub const EMPTY_BITBOARD: Bitboard = 0;
 pub const NUM_BOARD_RANKS: usize = 8;
+pub const NUM_BOARD_FILES: usize = 8;
 
 pub type Bitboard = u64;
 
 pub struct Board {
     /// Piece placement data.
-    bitboards: [[Bitboard; 6]; 2],
+    bitboards: [[Bitboard; NUM_PIECE_KINDS]; NUM_PIECE_SIDES],
     /// Which side is to move.
     active_side: Side,
     /// Availability to castle.
@@ -27,7 +30,7 @@ pub struct Board {
 impl Board {
     pub fn new() -> Self {
         Self { 
-            bitboards: [[EMPTY_BITBOARD; 6]; 2],
+            bitboards: [[EMPTY_BITBOARD; NUM_PIECE_KINDS]; NUM_PIECE_SIDES],
             active_side: Side::White,
             castling: 0,
             en_passant: None,
@@ -64,5 +67,82 @@ impl Board {
     pub fn move_piece(&mut self, side: Side, piece: Piece, from_square: Square, to_square: Square) {
         self.remove_piece(side, piece, from_square);
         self.place_piece(side, piece, to_square);
+    }
+
+    pub fn square(&self, square: Square) -> Option<(Side, Piece)> {
+        for s in 0..NUM_PIECE_SIDES {
+            for p in 0..NUM_PIECE_KINDS {
+                let bb = self.bitboards[s][p];
+                if (bb & square.as_mask()) != 0 {
+                    let side = match s {
+                        0 => Side::White,
+                        1 => Side::Black,
+                        _ => unreachable!(),
+                    };
+                    let piece = match p {
+                        0 => Piece::Pawn,
+                        1 => Piece::Knight,
+                        2 => Piece::Bishop,
+                        3 => Piece::Rook,
+                        4 => Piece::Queen,
+                        5 => Piece::King,
+                        _ => unreachable!(),
+                    };
+                    return Some((side, piece));
+                }
+            }
+        }
+        None
+    }
+}
+
+impl Display for Board {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}\n", self.as_fen())?;
+        let mut board = String::with_capacity(NUM_BOARD_SQUARES);
+        board.push_str("  A B C D E F G H\n");
+        for rank in 0..NUM_BOARD_RANKS {
+            board.push(RANK_NAMES[rank]);
+            board.push(' ');
+            for file in 0..NUM_BOARD_FILES {
+                if let Some((side, piece)) = self.square(Square::from_coord(rank as u8, file as u8)) {
+                    let c = match (side, piece) {
+                        (Side::White, Piece::Pawn) => WHITE_PAWN_UNICODE,
+                        (Side::White, Piece::Knight) => WHITE_KNIGHT_UNICODE,
+                        (Side::White, Piece::Bishop) => WHITE_BISHOP_UNICODE,
+                        (Side::White, Piece::Rook) => WHITE_ROOK_UNICODE,
+                        (Side::White, Piece::Queen) => WHITE_QUEEN_UNICODE,
+                        (Side::White, Piece::King) => WHITE_KING_UNICODE,
+                        (Side::Black, Piece::Pawn) => BLACK_PAWN_UNICODE,
+                        (Side::Black, Piece::Knight) => BLACK_KNIGHT_UNICODE,
+                        (Side::Black, Piece::Bishop) => BLACK_BISHOP_UNICODE,
+                        (Side::Black, Piece::Rook) => BLACK_ROOK_UNICODE,
+                        (Side::Black, Piece::Queen) => BLACK_QUEEN_UNICODE,
+                        (Side::Black, Piece::King) => BLACK_KING_UNICODE,
+                    };
+                    board.push(c);
+                    board.push(' ');
+                } else {
+                    board.push_str(". ");
+                }
+            }
+            board.push('\n');
+        }
+        board.push_str("  a b c d e f g h");
+        write!(f, "{}", board)
+    }
+}
+
+#[test]
+fn board_load_and_query() {
+    let mut board = Board::new();
+    let square = Square::from_str("d1").expect("failed to parse notation");
+    board.load_fen(DEFAULT_FEN_START).expect("failed to parse fen");
+    match board.square(square) {
+        Some((side, piece)) => {
+            assert_eq!(side, Side::White, "flipped sides");
+            assert_eq!(piece, Piece::Queen, "flipped pieces");
+        },
+        None => assert!(false)
     }
 }
