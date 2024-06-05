@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crate::board::{file::{File, NUM_BOARD_FILES}, rank::{Rank, NUM_BOARD_RANKS}};
 
-use self::{piece::{Piece, Side, BLACK_BISHOP_UNICODE, BLACK_KING_UNICODE, BLACK_KNIGHT_UNICODE, BLACK_PAWN_UNICODE, BLACK_QUEEN_UNICODE, BLACK_ROOK_UNICODE, NUM_PIECE_KINDS, NUM_PIECE_SIDES, WHITE_BISHOP_UNICODE, WHITE_KING_UNICODE, WHITE_KNIGHT_UNICODE, WHITE_PAWN_UNICODE, WHITE_QUEEN_UNICODE, WHITE_ROOK_UNICODE}, square::{Square, NUM_BOARD_SQUARES, RANK_NAMES}};
+use self::{fen::DEFAULT_FEN_START, piece::{Piece, Side, BLACK_BISHOP_UNICODE, BLACK_KING_UNICODE, BLACK_KNIGHT_UNICODE, BLACK_PAWN_UNICODE, BLACK_QUEEN_UNICODE, BLACK_ROOK_UNICODE, NUM_PIECE_KINDS, NUM_PIECE_SIDES, WHITE_BISHOP_UNICODE, WHITE_KING_UNICODE, WHITE_KNIGHT_UNICODE, WHITE_PAWN_UNICODE, WHITE_QUEEN_UNICODE, WHITE_ROOK_UNICODE}, square::{Square, NUM_BOARD_SQUARES, RANK_NAMES}};
 
 pub mod fen;
 mod file;
@@ -95,6 +95,14 @@ impl Board {
             }
         }
         None
+    }
+}
+
+impl Default for Board {
+    fn default() -> Self {
+        let mut board = Board::new();
+        board.load_fen(DEFAULT_FEN_START).expect("failed to load default fen");
+        board
     }
 }
 
