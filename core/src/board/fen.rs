@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use anyhow::{bail, Context};
 
-use super::{piece::{Piece, Side}, square::Square, Board, NUM_BOARD_FILES, NUM_BOARD_RANKS};
+use super::{file::{File, NUM_BOARD_FILES}, piece::{Piece, Side}, rank::{Rank, NUM_BOARD_RANKS}, square::Square, Board};
 
 pub const DEFAULT_FEN_START: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 const NUM_FEN_FIELDS: usize = 6;
@@ -35,22 +35,22 @@ impl Board {
         for part in ranks {
             rank -= 1;
             for c in part.chars() {
-                let mask = Square::from_coord(rank, file).as_mask();
+                let mask = Square::from_coord(Rank::from_index(rank), File::from_index(file)).as_mask();
                 match c {
-                    'p' => *self.piece_mut(Side::White, Piece::Pawn) |= mask,
-                    'n' => *self.piece_mut(Side::White, Piece::Knight) |= mask,
-                    'b' => *self.piece_mut(Side::White, Piece::Bishop) |= mask,
-                    'r' => *self.piece_mut(Side::White, Piece::Rook) |= mask,
-                    'q' => *self.piece_mut(Side::White, Piece::Queen) |= mask,
-                    'k' => *self.piece_mut(Side::White, Piece::King) |= mask,
-                    'P' => *self.piece_mut(Side::Black, Piece::Pawn) |= mask,
-                    'N' => *self.piece_mut(Side::Black, Piece::Knight) |= mask,
-                    'B' => *self.piece_mut(Side::Black, Piece::Bishop) |= mask,
-                    'R' => *self.piece_mut(Side::Black, Piece::Rook) |= mask,
-                    'Q' => *self.piece_mut(Side::Black, Piece::Queen) |= mask,
-                    'K' => *self.piece_mut(Side::Black, Piece::King) |= mask,
+                    'p' => *self.piece_mut(Side::Black, Piece::Pawn) |= mask,
+                    'n' => *self.piece_mut(Side::Black, Piece::Knight) |= mask,
+                    'b' => *self.piece_mut(Side::Black, Piece::Bishop) |= mask,
+                    'r' => *self.piece_mut(Side::Black, Piece::Rook) |= mask,
+                    'q' => *self.piece_mut(Side::Black, Piece::Queen) |= mask,
+                    'k' => *self.piece_mut(Side::Black, Piece::King) |= mask,
+                    'P' => *self.piece_mut(Side::White, Piece::Pawn) |= mask,
+                    'N' => *self.piece_mut(Side::White, Piece::Knight) |= mask,
+                    'B' => *self.piece_mut(Side::White, Piece::Bishop) |= mask,
+                    'R' => *self.piece_mut(Side::White, Piece::Rook) |= mask,
+                    'Q' => *self.piece_mut(Side::White, Piece::Queen) |= mask,
+                    'K' => *self.piece_mut(Side::White, Piece::King) |= mask,
                     '1'..='8' => {
-                        file += c.to_digit(10).expect("failed to parse number") as u8;
+                        file += c.to_digit(10).expect("failed to parse number") as usize;
                         continue;
                     },
                     _ => bail!("invalid FEN string char: {c}"),
@@ -93,13 +93,13 @@ impl Board {
     }
 
     pub fn as_fen(&self) -> String {
-        let mut fen = String::new();
+        let mut fen = String::with_capacity(90);
 
         let mut empty_counter = 0;
-        for rank in 0..NUM_BOARD_RANKS {
+        for rank in (0..NUM_BOARD_RANKS).rev() {
             let mut part = String::with_capacity(NUM_BOARD_FILES);
             for file in 0..NUM_BOARD_FILES {
-                if let Some(res) = self.square(Square::from_coord(rank as u8, file as u8)) {
+                if let Some(res) = self.square(Square::from_coord(Rank::from_index(rank), File::from_index(file))) {
                     if empty_counter != 0 {
                         part.push(char::from_digit(empty_counter, 10).unwrap());
                         empty_counter = 0;
@@ -127,7 +127,7 @@ impl Board {
                 part.push(char::from_digit(empty_counter, 10).unwrap());
                 empty_counter = 0;
             }
-            if rank != NUM_BOARD_RANKS - 1 {
+            if rank != 0 {
                 part.push('/')
             }
             fen.push_str(part.as_str());

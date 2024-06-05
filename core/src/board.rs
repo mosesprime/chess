@@ -1,14 +1,16 @@
-use std::{fmt::{write, Display}, str::FromStr};
+use std::fmt::Display;
 
-use self::{fen::DEFAULT_FEN_START, piece::{Piece, Side, BLACK_BISHOP_UNICODE, BLACK_KING_UNICODE, BLACK_KNIGHT_UNICODE, BLACK_PAWN_UNICODE, BLACK_QUEEN_UNICODE, BLACK_ROOK_UNICODE, NUM_PIECE_KINDS, NUM_PIECE_SIDES, WHITE_BISHOP_UNICODE, WHITE_KING_UNICODE, WHITE_KNIGHT_UNICODE, WHITE_PAWN_UNICODE, WHITE_QUEEN_UNICODE, WHITE_ROOK_UNICODE}, square::{Square, NUM_BOARD_SQUARES, RANK_NAMES}};
+use crate::board::{file::{File, NUM_BOARD_FILES}, rank::{Rank, NUM_BOARD_RANKS}};
+
+use self::{piece::{Piece, Side, BLACK_BISHOP_UNICODE, BLACK_KING_UNICODE, BLACK_KNIGHT_UNICODE, BLACK_PAWN_UNICODE, BLACK_QUEEN_UNICODE, BLACK_ROOK_UNICODE, NUM_PIECE_KINDS, NUM_PIECE_SIDES, WHITE_BISHOP_UNICODE, WHITE_KING_UNICODE, WHITE_KNIGHT_UNICODE, WHITE_PAWN_UNICODE, WHITE_QUEEN_UNICODE, WHITE_ROOK_UNICODE}, square::{Square, NUM_BOARD_SQUARES, RANK_NAMES}};
 
 pub mod fen;
+mod file;
 mod piece;
+mod rank;
 mod square;
 
 pub const EMPTY_BITBOARD: Bitboard = 0;
-pub const NUM_BOARD_RANKS: usize = 8;
-pub const NUM_BOARD_FILES: usize = 8;
 
 pub type Bitboard = u64;
 
@@ -100,12 +102,11 @@ impl Display for Board {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}\n", self.as_fen())?;
         let mut board = String::with_capacity(NUM_BOARD_SQUARES);
-        board.push_str("  A B C D E F G H\n");
-        for rank in 0..NUM_BOARD_RANKS {
+        for rank in (0..NUM_BOARD_RANKS).rev() {
             board.push(RANK_NAMES[rank]);
             board.push(' ');
             for file in 0..NUM_BOARD_FILES {
-                if let Some((side, piece)) = self.square(Square::from_coord(rank as u8, file as u8)) {
+                if let Some((side, piece)) = self.square(Square::from_coord(Rank::from_index(rank), File::from_index(file))) {
                     let c = match (side, piece) {
                         (Side::White, Piece::Pawn) => WHITE_PAWN_UNICODE,
                         (Side::White, Piece::Knight) => WHITE_KNIGHT_UNICODE,
@@ -135,13 +136,16 @@ impl Display for Board {
 
 #[test]
 fn board_load_and_query() {
+    use self::fen::DEFAULT_FEN_START;
+    use std::str::FromStr;
+    
     let mut board = Board::new();
     let square = Square::from_str("d1").expect("failed to parse notation");
     board.load_fen(DEFAULT_FEN_START).expect("failed to parse fen");
     match board.square(square) {
         Some((side, piece)) => {
-            assert_eq!(side, Side::White, "flipped sides");
             assert_eq!(piece, Piece::Queen, "flipped pieces");
+            assert_eq!(side, Side::White, "flipped sides");
         },
         None => assert!(false)
     }
