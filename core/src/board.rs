@@ -5,14 +5,33 @@ use crate::board::{file::{File, NUM_BOARD_FILES}, rank::{Rank, NUM_BOARD_RANKS}}
 use self::{fen::DEFAULT_FEN_START, piece::{Piece, Side, BLACK_BISHOP_UNICODE, BLACK_KING_UNICODE, BLACK_KNIGHT_UNICODE, BLACK_PAWN_UNICODE, BLACK_QUEEN_UNICODE, BLACK_ROOK_UNICODE, NUM_PIECE_KINDS, NUM_PIECE_SIDES, WHITE_BISHOP_UNICODE, WHITE_KING_UNICODE, WHITE_KNIGHT_UNICODE, WHITE_PAWN_UNICODE, WHITE_QUEEN_UNICODE, WHITE_ROOK_UNICODE}, square::{Square, NUM_BOARD_SQUARES, RANK_NAMES}};
 
 pub mod fen;
-mod file;
-mod piece;
-mod rank;
-mod square;
+pub mod file;
+pub mod piece;
+pub mod rank;
+pub mod square;
 
 pub const EMPTY_BITBOARD: Bitboard = 0;
 
 pub type Bitboard = u64;
+
+pub fn display_bitboard(bitboard: Bitboard) -> String {
+    let mut board = String::with_capacity(128);
+    for r in (0..8).rev() {
+        for f in 0..8 {
+            board.push(match bitboard >> (f + r * 8) & 1 {
+                0 => '.',
+                _ => '#',
+            });
+            if f != 7 {
+                board.push(' ');
+            }
+        }
+        if r != 0 {
+            board.push('\n');
+        }
+    }
+    board
+}
 
 pub struct Board {
     /// Piece placement data.

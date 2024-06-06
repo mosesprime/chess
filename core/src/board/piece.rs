@@ -1,20 +1,32 @@
 pub const NUM_PIECE_SIDES: usize = 2;
 pub const NUM_PIECE_KINDS: usize = 6;
 
+#[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Side {
-    White,
-    Black,
+    White = 0,
+    Black = 1,
 }
 
+impl Side {
+    pub const fn from_index(index: usize) -> Self {
+        match index & 1 {
+            0 => Side::White,
+            1 => Side::Black,
+            _ => unreachable!(),
+        }
+    }
+}
+
+#[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Piece {
-    Pawn,
-    Knight,
-    Bishop,
-    Rook,
-    Queen,
-    King,
+    Pawn = 0,
+    Knight = 1,
+    Bishop = 2,
+    Rook = 3,
+    Queen = 4,
+    King = 5,
 }
 
 pub const WHITE_KING_UNICODE: char = '\u{2654}';

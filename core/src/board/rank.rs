@@ -2,6 +2,8 @@ use std::str::FromStr;
 
 use anyhow::bail;
 
+use super::Bitboard;
+
 pub const NUM_BOARD_RANKS: usize = 8;
 
 #[repr(u8)]
@@ -19,7 +21,7 @@ pub enum Rank {
 
 impl Rank {
     #[inline]
-    pub fn from_index(value: usize) -> Self {
+    pub const fn from_index(value: usize) -> Self {
         // match should get optimized to no-op, wraps if value > 7
         match value & 7 {
             0 => Self::R1,
@@ -34,9 +36,13 @@ impl Rank {
         }
     }
 
-    #[inline]
-    pub fn as_index(&self) -> usize {
+    pub const fn as_index(&self) -> usize {
         *self as usize
+    }
+
+    pub const fn as_mask(&self) -> Bitboard {
+        let r1: Bitboard = 0xFF;
+        r1 << (self.as_index() * 8)
     }
 }
 

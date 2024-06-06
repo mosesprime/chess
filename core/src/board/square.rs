@@ -20,21 +20,33 @@ pub const SQUARE_NAMES: [&str; NUM_BOARD_SQUARES] = [
 ];
 
 #[derive(Debug, PartialEq)]
-pub struct Square(u8);
+pub struct Square(pub(crate) u8);
 
 impl Square {
+    pub const fn from_index(index: usize) -> Self {
+        Self(index as u8)
+    }
+
     pub fn from_coord(rank: Rank, file: File) -> Self {
         debug_assert!(rank as u8<= 7, "rank out of bounds ");
         debug_assert!(file as u8 <= 7, "file out of bounds");
         Self((rank as u8 * 8) + file as u8)
     }
 
-    pub fn as_mask(&self) -> Bitboard {
+    pub const fn as_mask(&self) -> Bitboard {
         0 | (1 << self.0)        
     }
 
     pub fn name(&self) -> &str {
         SQUARE_NAMES[self.0 as usize]
+    }
+
+    pub const fn rank(&self) -> Rank {
+        Rank::from_index((self.0 / 8) as usize)
+    }
+
+    pub const fn file(&self) -> File {
+        File::from_index((self.0 % 8) as usize)
     }
 }
 

@@ -2,6 +2,8 @@ use std::str::FromStr;
 
 use anyhow::bail;
 
+use super::Bitboard;
+
 pub const NUM_BOARD_FILES: usize = 8;
 
 #[repr(u8)]
@@ -19,7 +21,7 @@ pub enum File {
 
 impl File {
     #[inline]
-    pub fn from_index(value: usize) -> Self {
+    pub const fn from_index(value: usize) -> Self {
         // match should optimize to no-op, wraps if value > 7
         match value & 7 {
             0 => File::A,
@@ -34,9 +36,13 @@ impl File {
         }
     }
 
-    #[inline]
-    pub fn as_index(&self) -> usize {
+    pub const fn as_index(&self) -> usize {
         *self as usize
+    }
+
+    pub const fn as_mask(&self) -> Bitboard {
+        let a: Bitboard = 0x0101010101010101;
+        a << self.as_index()
     }
 }
 
