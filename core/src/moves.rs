@@ -4,6 +4,7 @@ mod king;
 mod knight;
 mod magic;
 mod pawn;
+mod rook;
 
 pub struct MoveGenerator {
     pawn: [[Bitboard; NUM_BOARD_SQUARES]; NUM_PIECE_SIDES],
