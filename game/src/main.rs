@@ -1,21 +1,11 @@
-use core::{board::display_bitboard, moves::{bishop::BISHOP_MOVE_TABLES, queen::QUEEN_MOVE_TABLES, rook::ROOK_MOVE_TABLES}};
+use chess_game::App;
+use dioxus::prelude::*;
 
 fn main() {
-    println!("= BISHOP MOVE TABLES =");
-    for bb in BISHOP_MOVE_TABLES {
-        println!("{}\n", display_bitboard(bb));
-    }
+    #[cfg(debug_assertions)]
+    dioxus_logger::init(tracing::Level::DEBUG).expect("failed to init logger");
+    #[cfg(not(debug_assertions))]
+    dioxus_logger::init(tracing::Level::INFO).expect("failed to init logger");
 
-    println!("= ROOK MOVE TABLES =");
-    for bb in ROOK_MOVE_TABLES {
-        println!("{}\n", display_bitboard(bb));
-    }
-
-    println!("= QUEEN MOVE TABLES =");
-    for bb in QUEEN_MOVE_TABLES {
-        println!("{}\n", display_bitboard(bb));
-    }
-
-    let board = core::board::Board::default();
-    println!("{}", board);
+    launch(App)
 }

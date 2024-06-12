@@ -1,7 +1,12 @@
 [package]
-name = "game"
+name = "chess-game"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-core = { path = "../core" }
+chess-core = { path = "../core" }
+
+dioxus = { version = "0.5.1", features = [ "web", "router"] }
+dioxus-logger = "0.5.1"
+manganis = "0.2.2"
+tracing = "0.1.40"
