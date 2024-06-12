@@ -9,3 +9,10 @@
 ## Getting Started
 
 Requires the [Rust](https://www.rust-lang.org/) toolchain.
+```
+# install Dioxus CLI
+cargo install dioxus-cli
+
+# run in release mode
+dx serve --bin chess-game --release
+```
