@@ -1,3 +1,36 @@
+use std::io;
+
+use anyhow::Context;
+use clap::{Parser, Subcommand};
+
 fn main() {
-    println!("Hello, world!");
+    let cli_args = CliArgs::parse();
+    match &cli_args.command {
+        Command::Uci => run_repl().unwrap(),
+    }
 }
+
+#[derive(Parser, Debug)]
+#[command(version, about)]
+struct CliArgs {
+    #[command(subcommand)]
+    command: Command,
+}
+
+#[derive(Debug, Subcommand)]
+enum Command {
+    /// runs the bot via the UCI protocol
+    Uci,
+}
+
+fn run_repl() -> anyhow::Result<()> {
+    let stdin = io::stdin();
+    let stdout = io::stdout();
+    loop {
+        let mut buf = String::new();
+        stdin.read_line(&mut buf).context("failed to read line")?;
+        let cmd = chess_core::uci::parse_command(buf)?;
+        println!("commmand: {:?}", cmd);
+    }
+}
+
