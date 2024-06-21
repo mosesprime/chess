@@ -5,6 +5,14 @@ use anyhow::bail;
 use super::Bitboard;
 
 pub const NUM_BOARD_FILES: usize = 8;
+pub const FILE_A: Bitboard = 0x0101010101010101;
+pub const FILE_B: Bitboard = 0x0202020202020202;
+pub const FILE_C: Bitboard = 0x0404040404040404;
+pub const FILE_D: Bitboard = 0x0808080808080808;
+pub const FILE_E: Bitboard = 0x1010101010101010;
+pub const FILE_F: Bitboard = 0x2020202020202020;
+pub const FILE_G: Bitboard = 0x4040404040404040;
+pub const FILE_H: Bitboard = 0x8080808080808080;
 
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd)]

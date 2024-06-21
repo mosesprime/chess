@@ -1,18 +1,15 @@
-use crate::board::{file::File, square::{NUM_BOARD_SQUARES}, Bitboard, EMPTY_BITBOARD};
+use crate::board::{file::{FILE_A, FILE_B, FILE_G, FILE_H}, square::{Square, NUM_BOARD_SQUARES}, Bitboard, EMPTY_BITBOARD};
 
-pub const KNIGHT_MOVE_TABLES: [Bitboard; NUM_BOARD_SQUARES] = gen_knight_tables();
-pub const KNIGHT_ATTACK_TABLES: [Bitboard; NUM_BOARD_SQUARES] = gen_knight_tables();
-
-const fn gen_knight_tables() -> [Bitboard; NUM_BOARD_SQUARES]  {
-    let mut table = [EMPTY_BITBOARD; NUM_BOARD_SQUARES];
-    let mut square = 0;
-    let a = File::A.as_mask();
-    let b = File::B.as_mask();
-    let g = File::G.as_mask();
-    let h = File::H.as_mask();
-    while square < NUM_BOARD_SQUARES {
-        let sq = square as u64;
-        table[square] = ((sq << 6) & !(g | h))
+/// Generate all possible knight move tables.
+pub fn gen_knight_moves() -> [Bitboard; NUM_BOARD_SQUARES]  {
+    let mut tables = [EMPTY_BITBOARD; NUM_BOARD_SQUARES];
+    let a = FILE_A;
+    let b = FILE_B;
+    let g = FILE_G;
+    let h = FILE_H;
+    for n in 0..NUM_BOARD_SQUARES {
+        let sq = Square::from_index(n).as_mask();
+        tables[n] = ((sq << 6) & !(g | h))
             | ((sq << 15) & !h)
             | ((sq << 17) & !a)
             | ((sq << 10) & !(a | b))
@@ -20,7 +17,6 @@ const fn gen_knight_tables() -> [Bitboard; NUM_BOARD_SQUARES]  {
             | ((sq >> 15) & !a)
             | ((sq >> 17) & !h)
             | ((sq >> 10) & !(g | h));
-        square += 1;
     }
-    table
+    tables
 }

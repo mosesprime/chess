@@ -5,6 +5,14 @@ use anyhow::bail;
 use super::Bitboard;
 
 pub const NUM_BOARD_RANKS: usize = 8;
+pub const RANK_1: Bitboard = 0x00000000000000FF;
+pub const RANK_2: Bitboard = 0x000000000000FF00;
+pub const RANK_3: Bitboard = 0x0000000000FF0000;
+pub const RANK_4: Bitboard = 0x00000000FF000000;
+pub const RANK_5: Bitboard = 0x000000FF00000000;
+pub const RANK_6: Bitboard = 0x0000FF0000000000;
+pub const RANK_7: Bitboard = 0x00FF000000000000;
+pub const RANK_8: Bitboard = 0xFF00000000000000;
 
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd)]

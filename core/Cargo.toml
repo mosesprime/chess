@@ -2,10 +2,14 @@
 name = "chess-core"
 version = "0.1.0"
 edition = "2021"
+build = "src/build.rs"
 
 [dependencies]
 anyhow = "1.0.86"
 clap = { version = "4.5.7", features = [ "derive" ] }
+
+[build-dependencies]
+anyhow = "1.0.86"
 
 [profile.dev]
 opt-level = 1
