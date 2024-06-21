@@ -80,7 +80,7 @@ pub fn output_event(out: &mut impl io::Write, event: UciEvent) -> io::Result<()>
     Ok(writeln!(out, "{}", msg)?)
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum UciCommmand {
     Uci,
     Debug(bool),
@@ -95,14 +95,14 @@ pub enum UciCommmand {
     Quit,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum RegisterCommand {
     Later,
     Name(String),
     Code(String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum PositionCommand {
     StartPos,
     Fen {
@@ -111,7 +111,7 @@ pub enum PositionCommand {
     },
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum GoCommand {
     SearchMoves(Vec<String>),
     Ponder,
