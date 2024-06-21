@@ -6,7 +6,8 @@ use clap::{Parser, Subcommand};
 fn main() {
     let cli_args = CliArgs::parse();
     match &cli_args.command {
-        Command::Uci => run_repl().unwrap(),
+        Some(Command::Uci) => run_repl().unwrap(),
+        None => {},
     }
 }
 
@@ -14,7 +15,7 @@ fn main() {
 #[command(version, about)]
 struct CliArgs {
     #[command(subcommand)]
-    command: Command,
+    command: Option<Command>,
 }
 
 #[derive(Debug, Subcommand)]
@@ -25,7 +26,7 @@ enum Command {
 
 fn run_repl() -> anyhow::Result<()> {
     let stdin = io::stdin();
-    let stdout = io::stdout();
+    // let stdout = io::stdout();
     loop {
         let mut buf = String::new();
         stdin.read_line(&mut buf).context("failed to read line")?;
@@ -33,4 +34,5 @@ fn run_repl() -> anyhow::Result<()> {
         println!("commmand: {:?}", cmd);
     }
 }
+
 
