@@ -1,9 +1,14 @@
+//! Generates the giant lookup tables.
+//! Since tables can be large enough to cause stack overflows on some targets (*cough* Windows *cough*)
+//! ensure that the table is not stored in its entirety. (ie  NOT ```let table = ROOK_MAGIC_TABLE;```)
+//! Use iterators or indexing instead.
+
 use std::{env, fs, io::{self, BufWriter, Write}, path::Path};
 
 use board::{piece::NUM_PIECE_SIDES, square::NUM_BOARD_SQUARES};
 use moves::magic::{BISHOP_MAGIC_TABLE_SIZE, ROOK_MAGIC_TABLE_SIZE};
-pub mod board;
-pub mod moves;
+mod board;
+mod moves;
 
 fn main() {
     println!("cargo::rerun-if-changed=build.rs");

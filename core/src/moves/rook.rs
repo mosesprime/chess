@@ -14,8 +14,9 @@ pub fn gen_rook_moves() -> [Bitboard; NUM_BOARD_SQUARES] {
     tables
 }
 
-pub fn gen_rook_magics() -> [Bitboard; ROOK_MAGIC_TABLE_SIZE] {
-    let mut magics = [EMPTY_BITBOARD; ROOK_MAGIC_TABLE_SIZE];
+/// Generate all possible rook magic tables.
+pub fn gen_rook_magics() -> Vec<Bitboard> {
+    let mut magics = vec![EMPTY_BITBOARD; ROOK_MAGIC_TABLE_SIZE];
     let mut offset = 0;
     for sq in 0..NUM_BOARD_SQUARES {
         let square = Square::from_index(sq);

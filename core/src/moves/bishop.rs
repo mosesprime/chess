@@ -27,9 +27,9 @@ pub fn gen_bishop_moves() -> [Bitboard; NUM_BOARD_SQUARES] {
     tables
 }
 
-
-pub fn gen_bishop_magics() -> [Bitboard; BISHOP_MAGIC_TABLE_SIZE] {
-    let mut magics = [EMPTY_BITBOARD; BISHOP_MAGIC_TABLE_SIZE];
+/// Generate all possible bishop magic tables.
+pub fn gen_bishop_magics() -> Vec<Bitboard> {
+    let mut magics = vec![EMPTY_BITBOARD; BISHOP_MAGIC_TABLE_SIZE];
     let moves = gen_bishop_moves();
     let mut offset = 0;
     for sq in 0..NUM_BOARD_SQUARES {
