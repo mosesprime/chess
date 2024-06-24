@@ -1,8 +1,11 @@
 use std::{io::{self, Write}, thread::available_parallelism};
 
 use anyhow::Context;
-use chess_core::uci::UciCommmand;
-use clap::{Parser, Subcommand};
+use chess_core::uci::{output_event, IdEvent, UciCommand, UciEvent};
+use clap::Parser;
+use cli::{CliArgs, CliCommand};
+
+mod cli;
 
 fn main() {
     let cli_args = CliArgs::parse();
@@ -11,44 +14,41 @@ fn main() {
         None => available_parallelism().unwrap().get(),
     };
     let config = Config::new(threads);
-    println!("{:?}", config);
     match &cli_args.command {
-        Some(Command::Uci) => run_uci_repl().unwrap(),
+        Some(CliCommand::Uci) => run_uci_repl(config).unwrap(),
         None => {},
     }
 }
 
-#[derive(Parser, Debug)]
-#[command(version, about)]
-struct CliArgs {
-    /// number of CPU threads to utilize, default = max
-    #[arg(short, long)]
-    threads: Option<usize>,
-
-    #[command(subcommand)]
-    command: Option<Command>,
-}
-
-#[derive(Debug, Subcommand)]
-enum Command {
-    /// runs the bot via the UCI protocol
-    Uci,
-}
-
-fn run_uci_repl() -> anyhow::Result<()> {
+fn run_uci_repl(config: Config) -> anyhow::Result<()> {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
     loop {
         let mut buf = String::new();
         stdin.read_line(&mut buf).context("failed to read line")?;
         let cmd = chess_core::uci::parse_command(buf)?;
-        if cmd == UciCommmand::Debug(true) {
-            writeln!(stdout, "info string debug activated").context("failed to write line")?;
-        } else {
-            println!("command: {:?}", cmd);
+        match cmd {
+            UciCommand::Uci => {
+                output_event(&mut stdout, UciEvent::Id(IdEvent::Name(ENGINE_NAME.to_string())))?;
+                writeln!(stdout, "id author {}", ENGINE_AUTHOR)?;
+                // TODO: send options that can change
+                writeln!(stdout, "uciok")?;
+            },
+            UciCommand::IsReady => {
+                // TODO: ensure ready
+                writeln!(stdout, "readyok")?;
+            },
+            UciCommand::Debug(true) => println!("info string debug enabled"),
+            UciCommand::Debug(false) => println!("info string debug disabled"),
+            UciCommand::Quit => break,
+            _ => todo!(),
         }
     }
+    Ok(())
 }
+
+const ENGINE_NAME: &str = "MonteCristo";
+const ENGINE_AUTHOR: &str = "mosesprime";
 
 #[derive(Debug)]
 struct Config {

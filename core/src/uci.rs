@@ -4,56 +4,67 @@ use std::io;
 
 use anyhow::bail;
 
-pub fn parse_command(line: String) -> anyhow::Result<UciCommmand> {
+pub fn parse_command(line: String) -> anyhow::Result<UciCommand> {
     let mut parts = line.split_ascii_whitespace();
     Ok(match parts.next() {
-        Some("uci") => UciCommmand::Uci,
+        Some("uci") => UciCommand::Uci,
         Some("debug") => match parts.next() {
-            Some("on") => UciCommmand::Debug(true),
-            Some("off") => UciCommmand::Debug(false),
+            Some("on") => UciCommand::Debug(true),
+            Some("off") => UciCommand::Debug(false),
             _ => bail!("failed to parse debug command"),
         },
-        Some("isready") => UciCommmand::IsReady,
+        Some("isready") => UciCommand::IsReady,
         Some("setoption") => todo!("set option"),
         Some("register") => todo!("register"),
-        Some("ucinewgame") => UciCommmand::UciNewGame,
+        Some("ucinewgame") => UciCommand::UciNewGame,
         Some("position") => todo!("position"),
         Some("go") => todo!("go"),
-        Some("stop") => UciCommmand::Stop,
-        Some("ponderhit") => UciCommmand::PonderHit,
-        Some("quit") => UciCommmand::Quit,
+        Some("stop") => UciCommand::Stop,
+        Some("ponderhit") => UciCommand::PonderHit,
+        Some("quit") => UciCommand::Quit,
         Some(s) => bail!("unable to parse uci command: {}", s),
         None => bail!("missing uci command to parse"),
     })
 }
 
-pub fn output_command(out: &mut impl io::Write, cmd: UciCommmand) -> io::Result<()> {
+pub fn output_command(cmd: UciCommand) {
     let msg = match cmd {
-        UciCommmand::Uci => "uci",
-        UciCommmand::Debug(check) => match check {
-            true => "debug on",
-            false => "debug off",
+        UciCommand::Uci => "uci".to_string(),
+        UciCommand::Debug(check) => match check {
+            true => "debug on".to_string(),
+            false => "debug off".to_string(),
         },
-        UciCommmand::IsReady => "isready",
-        UciCommmand::SetOption { name, value } => match value {
-            Some(v) => return Ok(writeln!(out, "setoption name {} value {}", name, v)?),
-            None => return Ok(writeln!(out, "setoption name {}", name)?),
+        UciCommand::IsReady => "isready".to_string(),
+        UciCommand::SetOption { name, value } => match value {
+            Some(v) => format!("setoption name {} value {}", name, v),
+            None => format!("setoption name {}", name),
         },
-        UciCommmand::Register(reg_cmd) => todo!("register"),
-        UciCommmand::UciNewGame => "ucinewgame",
-        UciCommmand::Position(pos_cmd) => todo!("position"),
-        UciCommmand::Go(go_cmd) => todo!("go"),
-        UciCommmand::Stop => "stop",
-        UciCommmand::PonderHit => "ponderhit",
-        UciCommmand::Quit => "quit",
+        UciCommand::Register(reg_cmd) => todo!("register"),
+        UciCommand::UciNewGame => "ucinewgame".to_string(),
+        UciCommand::Position(pos_cmd) => todo!("position"),
+        UciCommand::Go(go_cmd) => todo!("go"),
+        UciCommand::Stop => "stop".to_string(),
+        UciCommand::PonderHit => "ponderhit".to_string(),
+        UciCommand::Quit => "quit".to_string(),
     };
-    Ok(writeln!(out, "{}", msg)?)
+    println!("{}", msg);
 }
 
 pub fn parse_event(line: String) -> anyhow::Result<UciEvent> {
     let mut parts = line.split_ascii_whitespace();
     Ok(match parts.next() {
-        Some("id") => todo!("id"),
+        Some("id") => match parts.next() {
+            Some("name") => match parts.next() {
+                Some(name) => UciEvent::Id(IdEvent::Name(name.to_string())),
+                None => bail!("missing id name value"),
+            },
+            Some("author") => match parts.next() {
+                Some(author) => UciEvent::Id(IdEvent::Author(author.to_string())),
+                None => bail!("missing id author value"),
+            },
+            Some(s) => bail!("invalid id argument: {}", s),
+            None => bail!("missing id argument"),
+        },
         Some("uciok") => UciEvent::UciOk,
         Some("readyok") => UciEvent::ReadyOk,
         Some("bestmove") => todo!("bestmove"),
@@ -68,20 +79,26 @@ pub fn parse_event(line: String) -> anyhow::Result<UciEvent> {
 
 pub fn output_event(out: &mut impl io::Write, event: UciEvent) -> io::Result<()> {
     let msg = match event {
-        UciEvent::Id(id_event) => todo!("id"),
-        UciEvent::UciOk => "uciok",
-        UciEvent::ReadyOk => "readyok",
+        UciEvent::Id(id_event) => match id_event {
+            IdEvent::Name(name) => format!("id name {}", name),
+            IdEvent::Author(author) => format!("id author {}", author),
+        },
+        UciEvent::UciOk => "uciok".to_string(),
+        UciEvent::ReadyOk => "readyok".to_string(),
         UciEvent::BestMove { best, ponder } => todo!("bestmove"),
         UciEvent::CopyProtection => todo!("copyprotection"),
         UciEvent::Registration => todo!("registration"),
-        UciEvent::Info(info_event) => todo!("info"),
+        UciEvent::Info(info_event) => match info_event {
+            InfoEvent::String(s) => format!("info string {}", s),
+            _ => todo!(),
+        },
         UciEvent::Option(opt_event) => todo!("option"),
     };
     Ok(writeln!(out, "{}", msg)?)
 }
 
 #[derive(Debug, PartialEq)]
-pub enum UciCommmand {
+pub enum UciCommand {
     Uci,
     Debug(bool),
     IsReady,
@@ -104,10 +121,10 @@ pub enum RegisterCommand {
 
 #[derive(Debug, PartialEq)]
 pub enum PositionCommand {
-    StartPos,
+    StartPos { moves: Option<Vec<String>> },
     Fen {
         fen: String,
-        moves: Vec<String>,
+        moves: Option<Vec<String>>,
     },
 }
 
