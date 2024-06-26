@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 
-use chess_core::board::{file::{File, NUM_BOARD_FILES}, piece::{Piece, Side}, rank::{Rank, NUM_BOARD_RANKS}, square::{Square, FILE_NAMES, RANK_NAMES}, Board};
+use chess_core::board::{file::{File, NUM_BOARD_FILES}, piece::{Piece, Side}, rank::{Rank, NUM_BOARD_RANKS}, square::{Square, FILE_NAMES, RANK_NAMES}, Bitboard, Board};
 use dioxus::prelude::*;
 use tracing::debug;
 
@@ -37,16 +37,24 @@ pub fn App() -> Element {
 #[component]
 fn ChessBoard() -> Element {
     let board = use_context::<Signal<Board>>();
+    let mut active: Signal<Option<Square>> = use_signal(|| None);
+    let mut targeted: Signal<Bitboard> = use_signal(|| 0);
     rsx! {
         div {
             class: "chessboard",
             for rank in (0..NUM_BOARD_RANKS).rev() {
                 for file in 0..NUM_BOARD_FILES {
                     div {
-                        onclick: move |event| tracing::debug!("click {event:?}"),
+                        onclick: move |_| *active.write() = Some(Square::from_coord(Rank::from_index(rank), File::from_index(file))),
                         if let Some((side, piece)) = board.read().square(Square::from_coord(Rank::from_index(rank), File::from_index(file))) {
-                            PieceSprite { side, piece }
-                        } 
+                            if active.read().is_some_and(|s| s == Square::from_coord(Rank::from_index(rank), File::from_index(file))) {
+                                // TODO: properly render active
+                                PieceSprite { side, piece, active: true}
+                            } else {
+                                PieceSprite { side, piece, active: false }
+                            }
+                        }
+                        // TODO: add targeted
                     }
                 }
             }
@@ -83,8 +91,8 @@ fn Home() -> Element {
 }
 
 #[component]
-fn PieceSprite(side: Side, piece: Piece) -> Element {
-    debug!("render {:?} {:?}", side, piece);
+fn PieceSprite(side: Side, piece: Piece, active: bool) -> Element {
+    debug!("render {:?} {:?} active: {}", side, piece, active);
     let src = match (side, piece) {
         (Side::White, Piece::Pawn) => "../white_pawn.svg",
         (Side::White, Piece::Knight) => "../white_knight.svg",
@@ -99,10 +107,15 @@ fn PieceSprite(side: Side, piece: Piece) -> Element {
         (Side::Black, Piece::Queen) => "../black_queen.svg",
         (Side::Black, Piece::King) => "../black_king.svg",
     };
+    let style = match active {
+        false => "width: 100%; height: auto; background-color: transparent;",
+        true =>  "width: 100%; height: auto; background-color: transparent; opacity: 50%;"
+    };
     rsx! { 
         img { 
             class: "center",
-            "style" : "width: 100%; height: auto; background-color: transparent;",
+            "style" : style,
+            onclick: move |event| tracing::debug!("click piece event: {event:?}"),
             src,
         }
     }

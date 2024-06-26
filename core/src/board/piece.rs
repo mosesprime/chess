@@ -10,9 +10,10 @@ pub enum Side {
 
 impl Side {
     pub const fn from_index(index: usize) -> Self {
-        match index & 1 {
+        match index {
             0 => Side::White,
-            _ => Side::Black,
+            1 => Side::Black,
+            _ => unreachable!(),
         }
     }
 
@@ -37,7 +38,7 @@ pub enum Piece {
 
 impl Piece {
     pub fn from_index(index: usize) -> Self {
-        match index & 5 {
+        match index {
             0 => Piece::Pawn,
             1 => Piece::Knight,
             2 => Piece::Bishop,
