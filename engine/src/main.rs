@@ -6,6 +6,7 @@ use clap::Parser;
 use cli::{CliArgs, CliCommand};
 
 mod cli;
+mod search;
 
 fn main() {
     let cli_args = CliArgs::parse();
