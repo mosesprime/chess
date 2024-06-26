@@ -19,11 +19,12 @@ pub const SQUARE_NAMES: [&str; NUM_BOARD_SQUARES] = [
     "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
 ];
 
-#[derive(Debug, PartialEq)]
-pub struct Square(pub(crate) u8);
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub struct Square(pub u8);
 
 impl Square {
     pub const fn from_index(index: usize) -> Self {
+        debug_assert!(index <= 63, "squares index is out of bounds");
         Self(index as u8)
     }
 

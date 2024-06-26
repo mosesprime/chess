@@ -1,33 +1,33 @@
-use crate::board::{file::{FILE_A, FILE_H}, piece::{Side, NUM_PIECE_SIDES}, rank::{Rank, RANK_3, RANK_4, RANK_5, RANK_6}, square::{Square, NUM_BOARD_SQUARES}, Bitboard, EMPTY_BITBOARD};
+use crate::{board::{bitboard_square_iter, piece::Piece, rank::Rank, Board, EMPTY_BITBOARD}, PAWN_ATTACK_TABLE, PAWN_MOVE_TABLE};
 
-/// Generate all possible pawn move tables.
-pub fn gen_pawn_moves() -> [[Bitboard; NUM_BOARD_SQUARES]; NUM_PIECE_SIDES] {
-    let mut moves = [[EMPTY_BITBOARD; NUM_BOARD_SQUARES]; NUM_PIECE_SIDES];
-    for si in 0..NUM_PIECE_SIDES {
-        for sq in 0..NUM_BOARD_SQUARES {
-            let square = Square::from_index(sq);
-            moves[si][sq] = match (Side::from_index(si), square.rank(), square.file()) {
-                (Side::White, Rank::R2, file) => file.as_mask() & (RANK_3 | RANK_4),
-                (Side::White, rank, file) => file.as_mask() & (rank.as_mask() << 8),
-                (Side::Black, Rank::R7, file) => file.as_mask() & (RANK_6 | RANK_5),
-                (Side::Black, rank, file) => file.as_mask() & (rank.as_mask() >> 8),
-            };
+use super::{Move, MoveList};
+
+impl MoveList {
+    pub fn add_pawn_moves(&mut self, board: &Board) {
+        let active_side = board.active_side();
+        let pawns = board.piece(active_side, Piece::Pawn);
+        for from in bitboard_square_iter(pawns) {
+            let pushes = PAWN_MOVE_TABLE[active_side as usize][from.0 as usize] & !board.occupied();
+            let en_passant = board.en_passant().map_or(EMPTY_BITBOARD, |sq| sq.as_mask());
+            let enemy = board.side(active_side.other_side());
+            let attacks = PAWN_ATTACK_TABLE[active_side as usize][from.0 as usize] & (en_passant | enemy);
+            for dest in bitboard_square_iter(pushes | attacks) {
+                let mut flags = 0;
+                if (dest.as_mask() & attacks) > 0 {
+                    flags &= Move::CAPTURE;
+                }
+                if (dest.as_mask() & en_passant) > 0 {
+                    flags &= Move::EN_PASANT;
+                }
+                if dest.rank() == Rank::R8 || dest.rank()  == Rank::R1 {
+                    self.push(Move::new(from, dest, flags & Move::KNIGHT_PROMOTION));
+                    self.push(Move::new(from, dest, flags & Move::BISHOP_PROMOTION));
+                    self.push(Move::new(from, dest, flags & Move::ROOK_PROMOTION));
+                    self.push(Move::new(from, dest, flags & Move::QUEEN_PROMOTION));
+                } else {
+                    self.push(Move::new(from, dest, flags));
+                }
+            }    
         }
     }
-    moves
-}
-
-/// Generate all possible pawn attack tables.
-pub fn gen_pawn_attacks() -> [[Bitboard; NUM_BOARD_SQUARES]; NUM_PIECE_SIDES] {
-    let mut attacks = [[EMPTY_BITBOARD; NUM_BOARD_SQUARES]; NUM_PIECE_SIDES]; 
-    for si in 0..NUM_PIECE_SIDES {
-        for sq in 0..NUM_BOARD_SQUARES {
-            let mask = Square::from_index(sq).as_mask();
-            attacks[si][sq] = match Side::from_index(si) {
-                Side::White => ((mask << 7) & !FILE_H) | ((mask << 9) & !FILE_A),
-                Side::Black => ((mask >> 9) & !FILE_H) | ((mask >> 7) & !FILE_A),
-            };
-        }
-    }
-    attacks
 }

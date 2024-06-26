@@ -4,16 +4,29 @@ use crate::board::{file::{File, NUM_BOARD_FILES}, rank::{Rank, NUM_BOARD_RANKS}}
 
 use self::{fen::DEFAULT_FEN_START, piece::{Piece, Side, BLACK_BISHOP_UNICODE, BLACK_KING_UNICODE, BLACK_KNIGHT_UNICODE, BLACK_PAWN_UNICODE, BLACK_QUEEN_UNICODE, BLACK_ROOK_UNICODE, NUM_PIECE_KINDS, NUM_PIECE_SIDES, WHITE_BISHOP_UNICODE, WHITE_KING_UNICODE, WHITE_KNIGHT_UNICODE, WHITE_PAWN_UNICODE, WHITE_QUEEN_UNICODE, WHITE_ROOK_UNICODE}, square::{Square, NUM_BOARD_SQUARES, RANK_NAMES}};
 
-pub mod bitboard;
 pub mod fen;
 pub mod file;
 pub mod piece;
 pub mod rank;
 pub mod square;
 
+pub type Bitboard = u64;
+
+pub const FULL_BITBOARD: Bitboard = u64::MAX;
 pub const EMPTY_BITBOARD: Bitboard = 0;
 
-pub type Bitboard = u64;
+pub fn bitboard_square_iter(bitboard: Bitboard) -> impl Iterator<Item = Square> {
+    let mut bb = bitboard;
+    std::iter::from_fn(move || {
+        if bb > 0 {
+            let n = bb.trailing_zeros();
+            bb ^= 1u64 << n;
+            Some(Square(n as u8))
+        } else {
+            None
+        }
+    })
+}
 
 pub fn display_bitboard(bitboard: Bitboard) -> String {
     let mut board = String::with_capacity(128);
@@ -94,27 +107,20 @@ impl Board {
     pub fn square(&self, square: Square) -> Option<(Side, Piece)> {
         for s in 0..NUM_PIECE_SIDES {
             for p in 0..NUM_PIECE_KINDS {
-                let bb = self.bitboards[s][p];
-                if (bb & square.as_mask()) != 0 {
-                    let side = match s {
-                        0 => Side::White,
-                        1 => Side::Black,
-                        _ => unreachable!(),
-                    };
-                    let piece = match p {
-                        0 => Piece::Pawn,
-                        1 => Piece::Knight,
-                        2 => Piece::Bishop,
-                        3 => Piece::Rook,
-                        4 => Piece::Queen,
-                        5 => Piece::King,
-                        _ => unreachable!(),
-                    };
-                    return Some((side, piece));
+                if (self.bitboards[s][p] & square.as_mask()) != 0 {
+                    return Some((Side::from_index(s), Piece::from_index(p)));
                 }
             }
         }
         None
+    }
+
+    pub fn active_side(&self) -> Side {
+        self.active_side
+    }
+
+    pub fn en_passant(&self) -> Option<Square> {
+        self.en_passant
     }
 }
 

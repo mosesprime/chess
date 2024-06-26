@@ -1,21 +1,21 @@
-use crate::board::{file::{FILE_A, FILE_H}, square::{Square, NUM_BOARD_SQUARES}, Bitboard, EMPTY_BITBOARD};
+use crate::{board::{bitboard_square_iter, piece::Piece, square::Square, Board}, KING_MOVE_TABLE};
 
-/// Generate all possible king move tables. 
-pub fn gen_king_moves() -> [Bitboard; NUM_BOARD_SQUARES] {
-    let mut table = [EMPTY_BITBOARD; NUM_BOARD_SQUARES];
-    let a = FILE_A;
-    let h = FILE_H;
-    for n in 0..NUM_BOARD_SQUARES {
-        let sq = Square::from_index(n).as_mask();
-        table[n] = ((sq << 1) & !a)
-            | ((sq << 7) & !h)
-            | ((sq << 9) & !a)
-            | (sq << 8)
-            | (sq >> 8)
-            | ((sq >> 7) & !a)
-            | ((sq >> 9) & !h)
-            | ((sq >> 1) & !h);
+use super::{Move, MoveList};
+
+impl MoveList {
+    pub fn add_king_moves(&mut self, board: &Board) {
+        let active_side = board.active_side();
+        let king = board.piece(active_side, Piece::King);
+        let from = Square(king.trailing_zeros() as u8);
+        let attacks = KING_MOVE_TABLE[from.0 as usize] & !board.side(active_side);
+        for dest in bitboard_square_iter(attacks) {
+            if dest.as_mask() & board.side(active_side.other_side()) > 0 {
+                self.push(Move::new(from, dest, Move::CAPTURE));
+            } else {
+                self.push(Move::new(from, dest, 0));
+            }
+        }
     }
-    table
-}
 
+    // TODO: add castling moves
+}

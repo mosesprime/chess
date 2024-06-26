@@ -12,8 +12,14 @@ impl Side {
     pub const fn from_index(index: usize) -> Self {
         match index & 1 {
             0 => Side::White,
-            1 => Side::Black,
-            _ => unreachable!(),
+            _ => Side::Black,
+        }
+    }
+
+    pub fn other_side(&self) -> Self {
+        match self {
+            Self::White => Self::Black,
+            Self::Black => Self::White,
         }
     }
 }
@@ -27,6 +33,20 @@ pub enum Piece {
     Rook = 3,
     Queen = 4,
     King = 5,
+}
+
+impl Piece {
+    pub fn from_index(index: usize) -> Self {
+        match index & 5 {
+            0 => Piece::Pawn,
+            1 => Piece::Knight,
+            2 => Piece::Bishop,
+            3 => Piece::Rook,
+            4 => Piece::Queen,
+            5 => Piece::King,
+            _ => unreachable!(),
+        }
+    }
 }
 
 pub const WHITE_KING_UNICODE: char = '\u{2654}';

@@ -48,6 +48,25 @@ pub const BISHOP_MAGIC_NUMS: [u64; NUM_BOARD_SQUARES] = [
     290408795603472u64, 10664524198170591488u64, 5924513492108288u64, 90511840181764112u64,
 ];
 
+#[derive(Default, Debug, Clone, Copy)]
+pub struct Magic {
+    pub mask: Bitboard,
+    pub magic: u64,
+    pub offset: u64,
+    pub shift: u8,
+}
+
+impl Magic {
+    pub fn new(mask: Bitboard, magic: u64, shift: u8, offset: u64) -> Self {
+        Self { mask, magic , offset , shift  }
+    }
+
+    pub fn as_index(&self, occupied: Bitboard) -> usize {
+        let blockers = occupied & self.mask;
+        ((blockers.wrapping_mul(self.magic) >> self.shift) + self.offset) as usize
+    }
+}
+
 /// 
 pub const fn magic_index(mask: Bitboard, occupied: Bitboard, magic: u64, shift: u8, offset: u64) -> usize {
     let blockerboard = occupied & mask;
