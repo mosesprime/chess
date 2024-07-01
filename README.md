@@ -21,5 +21,6 @@ cargo install --bin chess-engine
 cargo install dioxus-cli
 
 # run in release mode
-dx serve --bin chess-game --release
+cd game
+dx serve --release
 ```
