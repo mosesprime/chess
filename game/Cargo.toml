@@ -6,7 +6,11 @@ edition = "2021"
 [dependencies]
 chess-core = { path = "../core" }
 
-dioxus = { version = "0.5.1", features = [ "web", "router"] }
+dioxus = { version = "0.5.1", features = [ "fullstack", "router"] }
 dioxus-logger = "0.5.1"
-manganis = "0.2.2"
 tracing = "0.1.40"
+
+[features]
+default = []
+server = ["dioxus/axum"]
+web = ["dioxus/web"]

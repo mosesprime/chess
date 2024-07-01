@@ -4,21 +4,6 @@ use chess_core::board::{file::{File, NUM_BOARD_FILES}, piece::{Piece, Side}, ran
 use dioxus::prelude::*;
 use tracing::debug;
 
-/*
-const WHITE_PAWN_SVG: &str = manganis::mg!(file("assets/white_pawn.svg"));
-const WHITE_KNIGHT_SVG: &str = manganis::mg!(file("assets/white_knight.svg"));
-const WHITE_BISHOP_SVG: &str = manganis::mg!(file("assets/white_bishop.svg"));
-const WHITE_ROOK_SVG: &str = manganis::mg!(file("assets/white_rook.svg"));
-const WHITE_QUEEN_SVG: &str = manganis::mg!(file("assets/white_queen.svg"));
-const WHITE_KING_SVG: &str = manganis::mg!(file("assets/white_king.svg"));
-const BLACK_PAWN_SVG: &str = manganis::mg!(file("assets/black_pawn.svg"));
-const BLACK_KNIGHT_SVG: &str = manganis::mg!(file("assets/black_knight.svg"));
-const BLACK_BISHOP_SVG: &str = manganis::mg!(file("assets/black_bishop.svg"));
-const BLACK_ROOK_SVG: &str = manganis::mg!(file("assets/black_rook.svg"));
-const BLACK_QUEEN_SVG: &str = manganis::mg!(file("assets/black_queen.svg"));
-const BLACK_KING_SVG: &str = manganis::mg!(file("assets/black_king.svg"));
-*/
-
 #[derive(Clone, Routable, Debug, PartialEq)]
 enum Route {
     #[route("/")]
