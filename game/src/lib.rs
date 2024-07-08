@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 
-use chess_core::board::{file::{File, NUM_BOARD_FILES}, piece::{Piece, Side}, rank::{Rank, NUM_BOARD_RANKS}, square::{Square, FILE_NAMES, RANK_NAMES}, Bitboard, Board};
+use chess_core::{board::{file::{File, NUM_BOARD_FILES}, piece::{Piece, Side}, rank::{Rank, NUM_BOARD_RANKS}, square::{Square, FILE_NAMES, RANK_NAMES}, Bitboard, Board}, moves::{generate_moves, Move, MoveList}};
 use dioxus::prelude::*;
 use tracing::debug;
 
@@ -23,14 +23,21 @@ pub fn App() -> Element {
 fn ChessBoard() -> Element {
     let board = use_context::<Signal<Board>>();
     let mut active: Signal<Option<Square>> = use_signal(|| None);
-    let mut targeted: Signal<Bitboard> = use_signal(|| 0);
+    let mut targets: Signal<Vec<Square>> = use_signal(|| vec![]);
     rsx! {
         div {
             class: "chessboard",
             for rank in (0..NUM_BOARD_RANKS).rev() {
                 for file in 0..NUM_BOARD_FILES {
                     div {
-                        onclick: move |_| *active.write() = Some(Square::from_coord(Rank::from_index(rank), File::from_index(file))),
+                        class: "tile",
+                        onmousedown: move |_| async move {
+                            *active.write() = Some(Square::from_coord(Rank::from_index(rank), File::from_index(file)));
+                            if let Ok(tars) = generate_targets(board.read().as_fen(), ((rank * 8) + file) as u8).await {
+                                debug!("targets {:?}", tars);
+                                *targets.write() = tars.iter().map(|&t| Square::from_index(t as usize)).collect();
+                            }
+                        },
                         if let Some((side, piece)) = board.read().square(Square::from_coord(Rank::from_index(rank), File::from_index(file))) {
                             if active.read().is_some_and(|s| s == Square::from_coord(Rank::from_index(rank), File::from_index(file))) {
                                 // TODO: properly render active
@@ -39,12 +46,36 @@ fn ChessBoard() -> Element {
                                 PieceSprite { side, piece, active: false }
                             }
                         }
-                        // TODO: add targeted
+                        if let Ok(i) = targets.read().binary_search(&Square::from_coord(Rank::from_index(rank), File::from_index(file))) {
+                            img {
+                                class: "center piece",
+                                style: "opacity: 50%;",
+                                src: "../dot.svg",
+                            }
+                        }
+                        
                     }
                 }
             }
         }
     }
+}
+
+#[server(GenerateTargets)]
+async fn generate_targets(fen: String, sq: u8) -> Result<Vec<u8>, ServerFnError> {
+    let mut board = Board::default();
+    board.load_fen(&fen);
+    let square = Square::from_index(sq as usize);
+    debug!("generating targets from {} on\n{}", square.name(), board);
+    let mut targets = vec![];
+    for m in generate_moves(&board).as_slice() {
+        debug!("gen move {} -> {}", m.from().name(), m.dest().name());
+        if m.from().0 == square.0 {
+            debug!("target {:?}", m.dest().name());
+            targets.push(m.dest().0)
+        }
+    }
+    Ok(targets)
 }
 
 #[component]
@@ -92,15 +123,14 @@ fn PieceSprite(side: Side, piece: Piece, active: bool) -> Element {
         (Side::Black, Piece::Queen) => "../black_queen.svg",
         (Side::Black, Piece::King) => "../black_king.svg",
     };
-    let style = match active {
-        false => "width: 100%; height: auto; background-color: transparent;",
-        true =>  "width: 100%; height: auto; background-color: transparent; opacity: 50%;"
-    };
     rsx! { 
         img { 
-            class: "center",
-            "style" : style,
-            onclick: move |event| tracing::debug!("click piece event: {event:?}"),
+            class: "piece center",
+            style : if active { 
+                "opacity: 50%;"
+            } else {
+                "opacity: 100%;"
+            },
             src,
         }
     }

@@ -19,7 +19,7 @@ pub const SQUARE_NAMES: [&str; NUM_BOARD_SQUARES] = [
     "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
 ];
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Copy, Clone)]
 pub struct Square(pub u8);
 
 impl Square {

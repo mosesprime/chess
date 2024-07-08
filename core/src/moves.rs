@@ -41,7 +41,7 @@ impl Move {
     pub const INVALID: Move = Move(0);
 
     pub fn new(from: Square, dest: Square, flags: u16) -> Self {
-        Self(from.0 as u16 | (dest.0 << Self::DEST) as u16 | (flags.wrapping_shl(Self::FLAGS as u32) as u16))
+        Self(from.0 as u16 | ((dest.0 as u16) << Self::DEST) | (flags << Self::FLAGS))
     }
 
     pub fn is_valid(&self) -> bool {
@@ -108,5 +108,23 @@ impl MoveList {
     pub fn swap(&mut self, a: usize, b: usize) {
         debug_assert!((a <= self.count) && (b <= self.count), "index out of bounds");
         self.list.swap(a, b)
+    }
+
+    pub fn into_iter(self) -> impl Iterator<Item = Move> {
+        println!("itt");
+        let mut n = 0;
+        std::iter::from_fn(move || {
+            if n < self.count {
+                Some(self.get(n))
+            } else {
+                n += 1;
+                None
+            }
+        })
+    }
+
+    pub fn as_slice(&self) -> &[Move] {
+        let (x, _) = self.list.split_at(self.count);
+        return x;
     }
 }
