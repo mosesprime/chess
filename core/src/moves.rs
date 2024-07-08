@@ -111,7 +111,6 @@ impl MoveList {
     }
 
     pub fn into_iter(self) -> impl Iterator<Item = Move> {
-        println!("itt");
         let mut n = 0;
         std::iter::from_fn(move || {
             if n < self.count {

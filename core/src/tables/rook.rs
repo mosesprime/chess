@@ -1,4 +1,4 @@
-use crate::{board::{display_bitboard, file::{FILE_A, FILE_H, NUM_BOARD_FILES}, rank::{NUM_BOARD_RANKS, RANK_1, RANK_8}, square::{Square, NUM_BOARD_SQUARES}, Bitboard, EMPTY_BITBOARD}, magic::{blocker_boards, magic_index, Magic, ROOK_MAGIC_NUMS, ROOK_MAGIC_TABLE_SIZE}};
+use crate::{board::{display_bitboard, file::{FILE_A, FILE_H, NUM_BOARD_FILES}, rank::{NUM_BOARD_RANKS, RANK_1, RANK_8}, square::{Square, NUM_BOARD_SQUARES}, Bitboard, EMPTY_BITBOARD}, magic::{blocker_boards, Magic, ROOK_MAGIC_NUMS, ROOK_MAGIC_TABLE_SIZE}};
 
 /// Generate all possible rook move tables.
 pub fn gen_rook_moves() -> [Bitboard; NUM_BOARD_SQUARES] {

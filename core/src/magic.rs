@@ -67,12 +67,6 @@ impl Magic {
     }
 }
 
-/// 
-pub const fn magic_index(mask: Bitboard, occupied: Bitboard, magic: u64, shift: u8, offset: u64) -> usize {
-    let blockerboard = occupied & mask;
-    ((blockerboard.wrapping_mul(magic) >> shift) + offset) as usize
-}
-
 /// Generates all permutaions of the given mask.
 /// Takes a mask representing the squares a piece can move to, without the edges.
 pub fn blocker_boards(mask: Bitboard) -> Vec<Bitboard> {

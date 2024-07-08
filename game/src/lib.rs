@@ -30,6 +30,7 @@ fn ChessBoard() -> Element {
             for rank in (0..NUM_BOARD_RANKS).rev() {
                 for file in 0..NUM_BOARD_FILES {
                     div {
+                        // TODO: clean up the Square::from_coord() calls
                         class: "tile",
                         onmousedown: move |_| async move {
                             *active.write() = Some(Square::from_coord(Rank::from_index(rank), File::from_index(file)));
@@ -66,12 +67,9 @@ async fn generate_targets(fen: String, sq: u8) -> Result<Vec<u8>, ServerFnError>
     let mut board = Board::default();
     board.load_fen(&fen);
     let square = Square::from_index(sq as usize);
-    debug!("generating targets from {} on\n{}", square.name(), board);
     let mut targets = vec![];
     for m in generate_moves(&board).as_slice() {
-        debug!("gen move {} -> {}", m.from().name(), m.dest().name());
         if m.from().0 == square.0 {
-            debug!("target {:?}", m.dest().name());
             targets.push(m.dest().0)
         }
     }
@@ -108,7 +106,6 @@ fn Home() -> Element {
 
 #[component]
 fn PieceSprite(side: Side, piece: Piece, active: bool) -> Element {
-    debug!("render {:?} {:?} active: {}", side, piece, active);
     let src = match (side, piece) {
         (Side::White, Piece::Pawn) => "../white_pawn.svg",
         (Side::White, Piece::Knight) => "../white_knight.svg",

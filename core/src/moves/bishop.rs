@@ -1,4 +1,4 @@
-use crate::{board::{bitboard_square_iter, piece::Piece, Board}, magic::{magic_index, BISHOP_MAGIC_NUMS}, BISHOP_ATTACK_TABLE, BISHOP_MAGIC_TABLE, BISHOP_MOVE_TABLE};
+use crate::{board::{bitboard_square_iter, piece::Piece, Board}, BISHOP_ATTACK_TABLE, BISHOP_MAGIC_TABLE};
 
 use super::{Move, MoveList};
 

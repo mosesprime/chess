@@ -1,4 +1,4 @@
-use crate::{board::{display_bitboard, file::{File, FILE_A, FILE_H}, rank::{RANK_1, RANK_8}, square::{Square, NUM_BOARD_SQUARES}, Bitboard, EMPTY_BITBOARD}, magic::{blocker_boards, magic_index, Magic, BISHOP_MAGIC_NUMS, BISHOP_MAGIC_TABLE_SIZE}};
+use crate::{board::{display_bitboard, file::{File, FILE_A, FILE_H}, rank::{RANK_1, RANK_8}, square::{Square, NUM_BOARD_SQUARES}, Bitboard, EMPTY_BITBOARD}, magic::{blocker_boards, Magic, BISHOP_MAGIC_NUMS, BISHOP_MAGIC_TABLE_SIZE}};
 
 /// Generate all possible bishop move tables.
 pub fn gen_bishop_moves() -> [Bitboard; NUM_BOARD_SQUARES] {
@@ -48,7 +48,7 @@ pub fn gen_bishop_magics() -> (Vec<Bitboard>, [Magic; NUM_BOARD_SQUARES]) {
                 ru = (ru << 9) & !FILE_A & !blocker;
                 ld = (ld >> 7) & !FILE_H & !blocker;
                 rd = (rd >> 9) & !FILE_A & !blocker;
-                attack |= (lu | ru | ld | rd);// & mask;
+                attack |= lu | ru | ld | rd;
             }
             attack
         }).collect();
