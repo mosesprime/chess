@@ -6,7 +6,7 @@ pub fn gen_king_moves() -> [Bitboard; NUM_BOARD_SQUARES] {
     let a = FILE_A;
     let h = FILE_H;
     for n in 0..NUM_BOARD_SQUARES {
-        let sq = Square::from_index(n).as_mask();
+        let sq = Square::from(n).as_mask();
         table[n] = ((sq << 1) & !a)
             | ((sq << 7) & !h)
             | ((sq << 9) & !a)

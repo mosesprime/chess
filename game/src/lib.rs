@@ -33,21 +33,43 @@ fn ChessBoard() -> Element {
                         // TODO: clean up the Square::from_coord() calls
                         class: "tile",
                         onmousedown: move |_| async move {
-                            *active.write() = Some(Square::from_coord(Rank::from_index(rank), File::from_index(file)));
+                            *active.write() = Some(Square::from_coord(Rank::from(rank), File::from(file)));
                             if let Ok(tars) = generate_targets(board.read().as_fen(), ((rank * 8) + file) as u8).await {
                                 debug!("targets {:?}", tars);
-                                *targets.write() = tars.iter().map(|&t| Square::from_index(t as usize)).collect();
+                                *targets.write() = tars.iter().map(|&t| Square::from(t)).collect();
                             }
                         },
-                        if let Some((side, piece)) = board.read().square(Square::from_coord(Rank::from_index(rank), File::from_index(file))) {
-                            if active.read().is_some_and(|s| s == Square::from_coord(Rank::from_index(rank), File::from_index(file))) {
+                        ondrop: move |_| async move {
+                            // debug!("drop: {}x{} {:?}", rank, file, e);
+                            if let Ok(m) = attempt_move(board.read().as_fen(), *active.read().unwrap(), ((rank * 8) + file) as u8).await {
+                                let m = Move::from(m);
+                                if m.is_valid() {
+                                    debug!("move {} -> {}", m.src().name(), m.dest().name());
+                                    if m.is_capturing() {
+                                        if let Some((s, p)) = board.read().square(m.dest()) {
+                                            // TODO: here
+                                        }
+                                    }
+                                } else {
+                                    tracing::warn!("invalid move");
+                                }
+                            } else {
+                                tracing::error!("attempt move server fn failed");
+                            }
+                        },
+                        prevent_default: "ondragover ondrop ondragstart",
+                        ondragover: move |_| {
+                            // debug!("dragover");
+                        },
+                        if let Some((side, piece)) = board.read().square(Square::from_coord(Rank::from(rank), File::from(file))) {
+                            if active.read().is_some_and(|s| s == Square::from_coord(Rank::from(rank), File::from(file))) {
                                 // TODO: properly render active
                                 PieceSprite { side, piece, active: true}
                             } else {
                                 PieceSprite { side, piece, active: false }
                             }
                         }
-                        if let Ok(i) = targets.read().binary_search(&Square::from_coord(Rank::from_index(rank), File::from_index(file))) {
+                        if let Ok(i) = targets.read().binary_search(&Square::from_coord(Rank::from(rank), File::from(file))) {
                             img {
                                 class: "center piece",
                                 style: "opacity: 50%;",
@@ -62,18 +84,41 @@ fn ChessBoard() -> Element {
     }
 }
 
-#[server(GenerateTargets)]
+#[server]
 async fn generate_targets(fen: String, sq: u8) -> Result<Vec<u8>, ServerFnError> {
-    let mut board = Board::default();
+    let mut board = Board::new();
     board.load_fen(&fen);
-    let square = Square::from_index(sq as usize);
+    let square = Square::from(sq);
+    debug!("generating targets from {} for {}", square.name(), fen);
     let mut targets = vec![];
     for m in generate_moves(&board).as_slice() {
-        if m.from().0 == square.0 {
-            targets.push(m.dest().0)
+        if m.src() == square {
+            targets.push(*m.dest())
         }
     }
     Ok(targets)
+}
+
+#[server]
+async fn attempt_move(fen: String, src: u8, dest: u8) -> Result<u16, ServerFnError> {
+    let src_sq = Square::from(src);
+    let dest_sq = Square::from(dest);
+    let mut board = Board::new();
+    board.load_fen(&fen);
+    debug!("attempting move from {} to {} on {}", src_sq.name(), dest_sq.name(), fen);
+    let mut flags = 0;
+    if let Some((side, _piece)) = board.square(dest_sq) {
+        // prohibit capture of friendly pieces
+        if side == board.active_side() {
+            return Ok(*Move::INVALID);
+        }
+        // TODO: add enpassant
+        // flags |= Move::CAPTURE;
+    }
+    // TODO: add castling
+    // TODO: add promotion
+    let legal_moves = generate_moves(&board);
+    Ok(*Move::new(src_sq, dest_sq, flags))
 }
 
 #[component]

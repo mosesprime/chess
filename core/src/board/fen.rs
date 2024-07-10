@@ -30,12 +30,12 @@ impl Board {
         if ranks.len() != NUM_BOARD_RANKS {
             bail!("invalid number of ranks in FEN string");
         }
-        let mut rank = 8;
-        let mut file = 0;
+        let mut rank: usize = 8;
+        let mut file: usize = 0;
         for part in ranks {
             rank -= 1;
             for c in part.chars() {
-                let mask = Square::from_coord(Rank::from_index(rank), File::from_index(file)).as_mask();
+                let mask = Square::from_coord(Rank::from(rank), File::from(file)).as_mask();
                 match c {
                     'p' => *self.piece_mut(Side::Black, Piece::Pawn) |= mask,
                     'n' => *self.piece_mut(Side::Black, Piece::Knight) |= mask,
@@ -99,7 +99,7 @@ impl Board {
         for rank in (0..NUM_BOARD_RANKS).rev() {
             let mut part = String::with_capacity(NUM_BOARD_FILES);
             for file in 0..NUM_BOARD_FILES {
-                if let Some(res) = self.square(Square::from_coord(Rank::from_index(rank), File::from_index(file))) {
+                if let Some(res) = self.square(Square::from_coord(Rank::from(rank), File::from(file))) {
                     if empty_counter != 0 {
                         part.push(char::from_digit(empty_counter, 10).unwrap());
                         empty_counter = 0;

@@ -28,29 +28,21 @@ pub enum Rank {
 }
 
 impl Rank {
-    #[inline]
-    pub const fn from_index(value: usize) -> Self {
-        // match should get optimized to no-op, wraps if value > 7
-        match value & 7 {
-            0 => Self::R1,
-            1 => Self::R2,
-            2 => Self::R3,
-            3 => Self::R4,
-            4 => Self::R5,
-            5 => Self::R6,
-            6 => Self::R7,
-            7 => Self::R8,
-            _ => unreachable!(),
-        }
-    }
-
-    pub const fn as_index(&self) -> usize {
-        *self as usize
-    }
-
     pub const fn as_mask(&self) -> Bitboard {
-        let r1: Bitboard = 0xFF;
-        r1 << (self.as_index() * 8)
+        RANK_1 << (*self as usize * 8)
+    }
+}
+
+impl From<u8> for Rank {
+    fn from(value: u8) -> Self {
+        debug_assert!(value < 8, "rank value out of bounds");
+        unsafe { std::mem::transmute(value) }
+    }
+}
+
+impl From<usize> for Rank {
+    fn from(value: usize) -> Self {
+        Self::from(value as u8)
     }
 }
 

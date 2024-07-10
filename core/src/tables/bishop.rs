@@ -7,7 +7,7 @@ pub fn gen_bishop_moves() -> [Bitboard; NUM_BOARD_SQUARES] {
     let h = File::H.as_mask();
     for sq in 0..NUM_BOARD_SQUARES {
         let mut ray_bb = 0;
-        let square = Square::from_index(sq);
+        let square = Square::from(sq);
         let mut up_rank = square.rank().as_mask();
         let mut down_rank = square.rank().as_mask();
         let mut left_file = square.file().as_mask();
@@ -32,7 +32,7 @@ pub fn gen_bishop_magics() -> (Vec<Bitboard>, [Magic; NUM_BOARD_SQUARES]) {
     let moves = gen_bishop_moves();
     let mut offset = 0;
     for sq in 0..NUM_BOARD_SQUARES {
-        let square = Square::from_index(sq);
+        let square = Square::from(sq);
         let mask = moves[sq] & !RANK_1 & !RANK_8 & !FILE_A & !FILE_H;
         let bits = mask.count_ones();
         let permutations = 2u64.pow(bits);

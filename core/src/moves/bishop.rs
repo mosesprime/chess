@@ -10,7 +10,7 @@ impl MoveList {
             let magic = BISHOP_MAGIC_TABLE[from.0 as usize];
             let attacks = BISHOP_ATTACK_TABLE[magic.as_index(board.occupied())] & !board.side(active_side);
             for dest in bitboard_square_iter(attacks) {
-                if (dest.as_mask() & board.side(active_side.other_side())) > 0 {
+                if (dest.as_mask() & board.side(active_side.other())) > 0 {
                     self.push(Move::new(from, dest, Move::CAPTURE));
                 } else {
                     self.push(Move::new(from, dest, 0));

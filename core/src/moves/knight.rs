@@ -9,7 +9,7 @@ impl MoveList {
         for from in bitboard_square_iter(knights) {
             let attacks = KNIGHT_MOVE_TABLE[from.0 as usize];
             for dest in bitboard_square_iter(attacks & !board.side(active_side)) {
-                if (dest.as_mask() & board.side(active_side.other_side())) > 0 {
+                if (dest.as_mask() & board.side(active_side.other())) > 0 {
                     self.push(Move::new(from, dest, Move::CAPTURE));
                 } else {
                     self.push(Move::new(from, dest, 0));

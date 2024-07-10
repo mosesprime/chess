@@ -28,29 +28,21 @@ pub enum File {
 }
 
 impl File {
-    #[inline]
-    pub const fn from_index(value: usize) -> Self {
-        // match should optimize to no-op, wraps if value > 7
-        match value & 7 {
-            0 => File::A,
-            1 => File::B,
-            2 => File::C,
-            3 => File::D,
-            4 => File::E,
-            5 => File::F,
-            6 => File::G,
-            7 => File::H,
-            _ => unreachable!(),
-        }
-    }
-
-    pub const fn as_index(&self) -> usize {
-        *self as usize
-    }
-
     pub const fn as_mask(&self) -> Bitboard {
-        let a: Bitboard = 0x0101010101010101;
-        a << self.as_index()
+        FILE_A << *self as usize
+    }
+}
+
+impl From<u8> for File {
+    fn from(value: u8) -> Self {
+        debug_assert!(value < 8, "file value out of bounds");
+        unsafe { std::mem::transmute(value) }
+    }
+}
+
+impl From<usize> for File {
+    fn from(value: usize) -> Self {
+        Self::from(value as u8)
     }
 }
 

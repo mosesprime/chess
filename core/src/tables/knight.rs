@@ -8,7 +8,7 @@ pub fn gen_knight_moves() -> [Bitboard; NUM_BOARD_SQUARES]  {
     let g = FILE_G;
     let h = FILE_H;
     for n in 0..NUM_BOARD_SQUARES {
-        let sq = Square::from_index(n).as_mask();
+        let sq = Square::from(n).as_mask();
         tables[n] = ((sq << 6) & !(g | h))
             | ((sq << 15) & !h)
             | ((sq << 17) & !a)

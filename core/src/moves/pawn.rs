@@ -9,7 +9,7 @@ impl MoveList {
         for from in bitboard_square_iter(pawns) {
             let pushes = PAWN_MOVE_TABLE[active_side as usize][from.0 as usize] & !board.occupied();
             let en_passant = board.en_passant().map_or(EMPTY_BITBOARD, |sq| sq.as_mask());
-            let enemy = board.side(active_side.other_side());
+            let enemy = board.side(active_side.other());
             let attacks = PAWN_ATTACK_TABLE[active_side as usize][from.0 as usize] & (en_passant | enemy);
             for dest in bitboard_square_iter(pushes | attacks) {
                 let mut flags = 0;

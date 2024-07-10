@@ -22,19 +22,21 @@ pub enum Side {
 }
 
 impl Side {
-    pub const fn from_index(index: usize) -> Self {
-        match index {
-            0 => Side::White,
-            1 => Side::Black,
-            _ => unreachable!(),
-        }
+    pub fn other(&self) -> Self {
+        Side::from(*self as u8 ^ 1)
     }
+}
 
-    pub fn other_side(&self) -> Self {
-        match self {
-            Self::White => Self::Black,
-            Self::Black => Self::White,
-        }
+impl From<u8> for Side {
+    fn from(value: u8) -> Self {
+        debug_assert!(value < 2, "side value out of bounds");
+        unsafe { std::mem::transmute(value) }
+    }
+}
+
+impl From<usize> for Side {
+    fn from(value: usize) -> Self {
+        Self::from(value as u8)
     }
 }
 
@@ -49,16 +51,15 @@ pub enum Piece {
     King = 5,
 }
 
-impl Piece {
-    pub fn from_index(index: usize) -> Self {
-        match index {
-            0 => Piece::Pawn,
-            1 => Piece::Knight,
-            2 => Piece::Bishop,
-            3 => Piece::Rook,
-            4 => Piece::Queen,
-            5 => Piece::King,
-            _ => unreachable!(),
-        }
+impl From<u8> for Piece {
+    fn from(value: u8) -> Self {
+        debug_assert!(value < 6, "piece value out of bounds");
+        unsafe { std::mem::transmute(value) }
+    }
+}
+
+impl From<usize> for Piece {
+    fn from(value: usize) -> Self {
+        Self::from(value as u8)
     }
 }

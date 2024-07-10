@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{ops::Deref, str::FromStr};
 
 use anyhow::{bail, Context};
 
@@ -20,14 +20,9 @@ pub const SQUARE_NAMES: [&str; NUM_BOARD_SQUARES] = [
 ];
 
 #[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Copy, Clone)]
-pub struct Square(pub u8);
+pub struct Square(pub(crate) u8);
 
 impl Square {
-    pub const fn from_index(index: usize) -> Self {
-        debug_assert!(index <= 63, "squares index is out of bounds");
-        Self(index as u8)
-    }
-
     pub fn from_coord(rank: Rank, file: File) -> Self {
         debug_assert!(rank as u8<= 7, "rank out of bounds ");
         debug_assert!(file as u8 <= 7, "file out of bounds");
@@ -42,12 +37,33 @@ impl Square {
         SQUARE_NAMES[self.0 as usize]
     }
 
-    pub const fn rank(&self) -> Rank {
-        Rank::from_index((self.0 / 8) as usize)
+    pub fn rank(&self) -> Rank {
+        Rank::from((self.0 / 8) as usize)
     }
 
-    pub const fn file(&self) -> File {
-        File::from_index((self.0 % 8) as usize)
+    pub fn file(&self) -> File {
+        File::from((self.0 % 8) as usize)
+    }
+}
+
+impl From<u8> for Square {
+    fn from(value: u8) -> Self {
+        debug_assert!(value <= 63, "squares index is out of bounds");
+        Square(value)
+    }
+}
+
+impl From<usize> for Square {
+    fn from(value: usize) -> Self {
+        debug_assert!(value <= 63, "squares index is out of bounds");
+        Square(value as u8)
+    }
+}
+
+impl Deref for Square {
+    type Target = u8;
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 

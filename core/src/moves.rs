@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use crate::{board::{bitboard_square_iter, piece::{Piece, Side}, rank::Rank, square::Square, Bitboard, Board, EMPTY_BITBOARD}, PAWN_ATTACK_TABLE, PAWN_MOVE_TABLE};
 
 pub mod bishop;
@@ -23,8 +25,8 @@ pub fn generate_moves(board: &Board) -> MoveList {
 /// Theoretical max number of possible legal moves.
 pub const MAX_LEGAL_MOVES: usize = 218;
 
-#[derive(Clone, Copy)]
-pub struct Move(pub u16);
+#[derive(Clone, Copy, PartialEq)]
+pub struct Move(pub(crate) u16);
 
 impl Move {
     const FROM: usize = 0;
@@ -40,20 +42,20 @@ impl Move {
     const QUEEN_PROMOTION: u16 = 0b1110_0000_0000_0000;
     pub const INVALID: Move = Move(0);
 
-    pub fn new(from: Square, dest: Square, flags: u16) -> Self {
-        Self(from.0 as u16 | ((dest.0 as u16) << Self::DEST) | (flags << Self::FLAGS))
+    pub fn new(src: Square, dest: Square, flags: u16) -> Self {
+        Self(src.0 as u16 | ((dest.0 as u16) << Self::DEST) | (flags << Self::FLAGS))
     }
 
     pub fn is_valid(&self) -> bool {
         (self.0 & 0x0FFF) != 0
     }
 
-    pub fn from(&self) -> Square {
-        Square::from_index(((self.0 >> Self::FROM) & 0x3F) as usize)
+    pub fn src(&self) -> Square {
+        Square::from(((self.0 >> Self::FROM) & 0x3F) as usize)
     }
 
     pub fn dest(&self) -> Square {
-        Square::from_index(((self.0 >> Self::DEST) & 0x3F) as usize)
+        Square::from(((self.0 >> Self::DEST) & 0x3F) as usize)
     }
 
     pub fn promoted(&self) -> Option<Piece> {
@@ -65,6 +67,51 @@ impl Move {
             Self::QUEEN_PROMOTION => Some(Piece::Queen),
             _ => None,
         }
+    }
+
+    pub fn is_capturing(&self) -> bool {
+        self.0 & Self::CAPTURE > 0
+    }
+
+    #[cfg(target_feature = "bmi2")]
+    pub fn set_src(&mut self, src: Square) {
+        std::arch::x86_64::_pdep_u64(src.0, 0x3F)
+    }
+
+    #[cfg(not(target_feature = "bmi2"))]
+    pub fn set_src(&mut self, src: Square) {
+        self.0 &= !0x3F;
+        self.0 |= src.0 as u16;
+    }
+
+    #[cfg(target_feature = "bmi2")]
+    pub fn set_dest(&mut self, dest: Square) {
+        std::arch::x86_64::_pdep_u64(dest.0, 0b0000_1111_1100_0000)
+    }
+
+    #[cfg(not(target_feature = "bmi2"))]
+    pub fn set_dest(&mut self, dest: Square) {
+        self.0 &= 0b1111_0000_0011_1111;
+        self.0 |= (dest.0 << Self::DEST) as u16;
+    }
+}
+
+impl Default for Move {
+    fn default() -> Self {
+        Self::INVALID
+    }
+}
+
+impl From<u16> for Move {
+    fn from(value: u16) -> Self {
+        Move(value)
+    }
+}
+
+impl Deref for Move {
+    type Target = u16;
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
@@ -123,7 +170,10 @@ impl MoveList {
     }
 
     pub fn as_slice(&self) -> &[Move] {
-        let (x, _) = self.list.split_at(self.count);
-        return x;
+        &self.list[0..self.count]
+    }
+
+    pub fn contains(&self, m: &Move) -> bool {
+        self.list.as_slice().contains(m)
     }
 }

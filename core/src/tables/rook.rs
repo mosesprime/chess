@@ -4,7 +4,7 @@ use crate::{board::{display_bitboard, file::{FILE_A, FILE_H, NUM_BOARD_FILES}, r
 pub fn gen_rook_moves() -> [Bitboard; NUM_BOARD_SQUARES] {
     let mut tables = [EMPTY_BITBOARD; NUM_BOARD_SQUARES];
     for n in 0..NUM_BOARD_SQUARES {
-        let square = Square::from_index(n);
+        let square = Square::from(n);
         let rank = square.rank().as_mask();
         let file = square.file().as_mask();
         tables[n] = rank ^ file;
@@ -18,7 +18,7 @@ pub fn gen_rook_magics() -> (Vec<Bitboard>, [Magic; NUM_BOARD_SQUARES]) {
     let mut magics = [Magic::default(); NUM_BOARD_SQUARES];
     let mut offset = 0;
     for sq in 0..NUM_BOARD_SQUARES {
-        let square = Square::from_index(sq);
+        let square = Square::from(sq);
         let mask = {
             let rank = square.rank().as_mask();
             let file = square.file().as_mask();

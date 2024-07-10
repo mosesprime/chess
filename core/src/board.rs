@@ -108,7 +108,7 @@ impl Board {
         for s in 0..NUM_PIECE_SIDES {
             for p in 0..NUM_PIECE_KINDS {
                 if (self.bitboards[s][p] & square.as_mask()) != 0 {
-                    return Some((Side::from_index(s), Piece::from_index(p)));
+                    return Some((Side::from(s), Piece::from(p)));
                 }
             }
         }
@@ -140,7 +140,7 @@ impl Display for Board {
             board.push(RANK_NAMES[rank]);
             board.push(' ');
             for file in 0..NUM_BOARD_FILES {
-                if let Some((side, piece)) = self.square(Square::from_coord(Rank::from_index(rank), File::from_index(file))) {
+                if let Some((side, piece)) = self.square(Square::from_coord(Rank::from(rank), File::from(file))) {
                     let c = match (side, piece) {
                         (Side::White, Piece::Pawn) => WHITE_PAWN_UNICODE,
                         (Side::White, Piece::Knight) => WHITE_KNIGHT_UNICODE,
