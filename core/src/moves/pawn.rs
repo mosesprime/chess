@@ -1,6 +1,6 @@
 use crate::{board::{bitboard_square_iter, piece::Piece, rank::Rank, Board, EMPTY_BITBOARD}, PAWN_ATTACK_TABLE, PAWN_MOVE_TABLE};
 
-use super::{Move, MoveList};
+use super::{ShortMove, MoveList};
 
 impl MoveList {
     pub fn add_pawn_moves(&mut self, board: &Board) {
@@ -13,19 +13,19 @@ impl MoveList {
             let attacks = PAWN_ATTACK_TABLE[active_side as usize][from.0 as usize] & (en_passant | enemy);
             for dest in bitboard_square_iter(pushes | attacks) {
                 let mut flags = 0;
-                if (dest.as_mask() & attacks) > 0 {
-                    flags &= Move::CAPTURE;
+                if (dest.as_mask() & attacks) != 0 {
+                    flags |= ShortMove::CAPTURE_FLAG;
                 }
-                if (dest.as_mask() & en_passant) > 0 {
-                    flags &= Move::EN_PASANT;
+                if (dest.as_mask() & en_passant) != 0 {
+                    flags |= ShortMove::EN_PASANT_FLAG;
                 }
                 if dest.rank() == Rank::R8 || dest.rank()  == Rank::R1 {
-                    self.push(Move::new(from, dest, flags & Move::KNIGHT_PROMOTION));
-                    self.push(Move::new(from, dest, flags & Move::BISHOP_PROMOTION));
-                    self.push(Move::new(from, dest, flags & Move::ROOK_PROMOTION));
-                    self.push(Move::new(from, dest, flags & Move::QUEEN_PROMOTION));
+                    self.push(ShortMove::new(from, dest, flags | ShortMove::KNIGHT_PROMOTION_FLAG));
+                    self.push(ShortMove::new(from, dest, flags | ShortMove::BISHOP_PROMOTION_FLAG));
+                    self.push(ShortMove::new(from, dest, flags | ShortMove::ROOK_PROMOTION_FLAG));
+                    self.push(ShortMove::new(from, dest, flags | ShortMove::QUEEN_PROMOTION_FLAG));
                 } else {
-                    self.push(Move::new(from, dest, flags));
+                    self.push(ShortMove::new(from, dest, flags));
                 }
             }    
         }

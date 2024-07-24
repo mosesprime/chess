@@ -1,4 +1,4 @@
-use std::ops::Deref;
+use std::{fmt::Debug, ops::Deref};
 
 use crate::{board::{bitboard_square_iter, piece::{Piece, Side}, rank::Rank, square::Square, Bitboard, Board, EMPTY_BITBOARD}, PAWN_ATTACK_TABLE, PAWN_MOVE_TABLE};
 
@@ -26,98 +26,106 @@ pub fn generate_moves(board: &Board) -> MoveList {
 pub const MAX_LEGAL_MOVES: usize = 218;
 
 #[derive(Clone, Copy, PartialEq)]
-pub struct Move(pub(crate) u16);
+pub struct ShortMove(pub(crate) u16);
 
-impl Move {
-    const FROM: usize = 0;
-    const DEST: usize = 6;
-    const FLAGS: usize = 12; 
-    const CAPTURE: u16 = 0b0001_0000_0000_0000;
-    const CASTLING: u16 = 0b0010_0000_0000_0000;
-    const EN_PASANT: u16 = 0b0100_0000_0000_0000;
-    //const DOUBLE_STEP: u16 = 0b0100_0000_0000_0000;
-    const KNIGHT_PROMOTION: u16 = 0b1000_0000_0000_0000;
-    const BISHOP_PROMOTION: u16 = 0b1010_0000_0000_0000;
-    const ROOK_PROMOTION: u16 = 0b1100_0000_0000_0000;
-    const QUEEN_PROMOTION: u16 = 0b1110_0000_0000_0000;
-    pub const INVALID: Move = Move(0);
+impl ShortMove {
+    const FROM_OFFSET: usize = 0;
+    const FROM_MASK: u16 = 0b0000_0000_0011_1111;
+    const DEST_OFFSET: usize = 6;
+    const DEST_MASK: u16 = 0b0000_1111_1100_0000;
+    const FLAGS_OFFSET: usize = 12;
+    const FLAGS_MASK: u16 = 0b1111_0000_0000_0000;
+    pub const CAPTURE_FLAG: u16 = 0b0001_0000_0000_0000;
+    pub const CASTLING_FLAG: u16 = 0b0010_0000_0000_0000;
+    pub const EN_PASANT_FLAG: u16 = 0b0100_0000_0000_0000;
+    const PROMOTION_MASK: u16 = 0b1110_0000_0000_0000;
+    pub const KNIGHT_PROMOTION_FLAG: u16 = 0b1000_0000_0000_0000;
+    pub const BISHOP_PROMOTION_FLAG: u16 = 0b1010_0000_0000_0000;
+    pub const ROOK_PROMOTION_FLAG: u16 = 0b1100_0000_0000_0000;
+    pub const QUEEN_PROMOTION_FLAG: u16 = 0b1110_0000_0000_0000;
+    pub const INVALID: ShortMove = ShortMove(0);
 
     pub fn new(src: Square, dest: Square, flags: u16) -> Self {
-        Self(src.0 as u16 | ((dest.0 as u16) << Self::DEST) | (flags << Self::FLAGS))
+        Self(src.0 as u16 | ((dest.0 as u16) << Self::DEST_OFFSET) | (flags << Self::FLAGS_OFFSET))
     }
 
     pub fn is_valid(&self) -> bool {
-        (self.0 & 0x0FFF) != 0
+        debug_assert!(self.src() != self.dest(), "src and dest should not be the same");
+        debug_assert!((self.is_en_pasant() && self.is_capturing()) && self.is_capturing(), "all en pasant should also be captures"); 
+        debug_assert!(!(self.is_capturing() && self.is_castling()), "should not be able to castle and capture simultaneously");
+        *self != Self::INVALID
     }
 
     pub fn src(&self) -> Square {
-        Square::from(((self.0 >> Self::FROM) & 0x3F) as usize)
+        Square::from((self.0 >> Self::FROM_OFFSET) & 0x3F)
     }
 
     pub fn dest(&self) -> Square {
-        Square::from(((self.0 >> Self::DEST) & 0x3F) as usize)
+        Square::from((self.0 >> Self::DEST_OFFSET) & 0x3F)
     }
 
     pub fn promoted(&self) -> Option<Piece> {
         // TODO: ensure that captures and promotions dont conflict
-        match self.0 >> Self::FLAGS {
-            Self::KNIGHT_PROMOTION => Some(Piece::Knight),
-            Self::BISHOP_PROMOTION => Some(Piece::Bishop),
-            Self::ROOK_PROMOTION => Some(Piece::Rook),
-            Self::QUEEN_PROMOTION => Some(Piece::Queen),
+        match self.0 & Self::PROMOTION_MASK {
+            Self::KNIGHT_PROMOTION_FLAG => Some(Piece::Knight),
+            Self::BISHOP_PROMOTION_FLAG => Some(Piece::Bishop),
+            Self::ROOK_PROMOTION_FLAG => Some(Piece::Rook),
+            Self::QUEEN_PROMOTION_FLAG => Some(Piece::Queen),
             _ => None,
         }
     }
 
     pub fn is_capturing(&self) -> bool {
-        self.0 & Self::CAPTURE > 0
+        self.0 & Self::CAPTURE_FLAG != 0
     }
 
-    #[cfg(target_feature = "bmi2")]
-    pub fn set_src(&mut self, src: Square) {
-        std::arch::x86_64::_pdep_u64(src.0, 0x3F)
+    pub fn is_en_pasant(&self) -> bool {
+        self.0 & Self::EN_PASANT_FLAG != 0
     }
 
-    #[cfg(not(target_feature = "bmi2"))]
+    pub fn is_castling(&self) -> bool {
+        self.0 & Self::CASTLING_FLAG != 0
+    }
+
     pub fn set_src(&mut self, src: Square) {
         self.0 &= !0x3F;
         self.0 |= src.0 as u16;
     }
 
-    #[cfg(target_feature = "bmi2")]
     pub fn set_dest(&mut self, dest: Square) {
-        std::arch::x86_64::_pdep_u64(dest.0, 0b0000_1111_1100_0000)
-    }
-
-    #[cfg(not(target_feature = "bmi2"))]
-    pub fn set_dest(&mut self, dest: Square) {
-        self.0 &= 0b1111_0000_0011_1111;
-        self.0 |= (dest.0 << Self::DEST) as u16;
+        self.0 &= !Self::DEST_MASK;
+        self.0 |= (dest.0 << Self::DEST_OFFSET) as u16;
     }
 }
 
-impl Default for Move {
+impl Default for ShortMove {
     fn default() -> Self {
         Self::INVALID
     }
 }
 
-impl From<u16> for Move {
+impl From<u16> for ShortMove {
     fn from(value: u16) -> Self {
-        Move(value)
+        Self(value)
     }
 }
 
-impl Deref for Move {
+impl Deref for ShortMove {
     type Target = u16;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
+impl Debug for ShortMove {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ShortMove({:#b})", self.0)
+    }
+}
+
 #[derive(Clone, Copy)]
 pub struct MoveList {
-    list: [Move; MAX_LEGAL_MOVES],
+    list: [ShortMove; MAX_LEGAL_MOVES],
     count: usize,
 }
 
@@ -134,19 +142,19 @@ impl MoveList {
         self.count
     }
 
-    pub fn push(&mut self, m: Move) {
-        self.list[self.count] = m;
+    pub fn push(&mut self, short_move: ShortMove) {
+        self.list[self.count] = short_move;
         self.count += 1;
         debug_assert!(self.count <= MAX_LEGAL_MOVES, "exceded max legal moves");
     }
 
-    pub fn get(&self, index: usize) -> Move {
+    pub fn get(&self, index: usize) -> ShortMove {
         debug_assert!(index <= MAX_LEGAL_MOVES, "index excedes max legal moves");
         debug_assert!(index <= self.count, "index out of bounds");
         self.list[index]
     }
 
-    pub fn get_mut(&mut self, index: usize) -> &mut Move {
+    pub fn get_mut(&mut self, index: usize) -> &mut ShortMove {
         debug_assert!(index <= MAX_LEGAL_MOVES, "index excedes max legal moves");
         debug_assert!(index <= self.count, "index out of bounds");
         &mut self.list[index]
@@ -157,7 +165,7 @@ impl MoveList {
         self.list.swap(a, b)
     }
 
-    pub fn into_iter(self) -> impl Iterator<Item = Move> {
+    pub fn into_iter(self) -> impl Iterator<Item = ShortMove> {
         let mut n = 0;
         std::iter::from_fn(move || {
             if n < self.count {
@@ -169,11 +177,11 @@ impl MoveList {
         })
     }
 
-    pub fn as_slice(&self) -> &[Move] {
+    pub fn as_slice(&self) -> &[ShortMove] {
         &self.list[0..self.count]
     }
 
-    pub fn contains(&self, m: &Move) -> bool {
+    pub fn contains(&self, m: &ShortMove) -> bool {
         self.list.as_slice().contains(m)
     }
 }

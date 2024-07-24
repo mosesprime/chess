@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 
-use chess_core::{board::{file::{File, NUM_BOARD_FILES}, piece::{Piece, Side}, rank::{Rank, NUM_BOARD_RANKS}, square::{Square, FILE_NAMES, RANK_NAMES}, Bitboard, Board}, moves::{generate_moves, Move, MoveList}};
+use chess_core::{board::{file::{File, NUM_BOARD_FILES}, piece::{Piece, Side}, rank::{Rank, NUM_BOARD_RANKS}, square::{Square, FILE_NAMES, RANK_NAMES}, Bitboard, Board}, moves::{generate_moves, ShortMove, MoveList}};
 use dioxus::prelude::*;
 use tracing::debug;
 
@@ -42,7 +42,7 @@ fn ChessBoard() -> Element {
                         ondrop: move |_| async move {
                             // debug!("drop: {}x{} {:?}", rank, file, e);
                             if let Ok(m) = attempt_move(board.read().as_fen(), *active.read().unwrap(), ((rank * 8) + file) as u8).await {
-                                let m = Move::from(m);
+                                let m = ShortMove::from(m);
                                 if m.is_valid() {
                                     debug!("move {} -> {}", m.src().name(), m.dest().name());
                                     if m.is_capturing() {

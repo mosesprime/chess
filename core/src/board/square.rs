@@ -48,14 +48,21 @@ impl Square {
 
 impl From<u8> for Square {
     fn from(value: u8) -> Self {
-        debug_assert!(value <= 63, "squares index is out of bounds");
+        debug_assert!(value < 64, "squares index is out of bounds");
         Square(value)
+    }
+}
+
+impl From<u16> for Square {
+    fn from(value: u16) -> Self {
+        debug_assert!(value < 64, "squares index is out of bounds");
+        Square(value as u8)
     }
 }
 
 impl From<usize> for Square {
     fn from(value: usize) -> Self {
-        debug_assert!(value <= 63, "squares index is out of bounds");
+        debug_assert!(value < 64, "squares index is out of bounds");
         Square(value as u8)
     }
 }
