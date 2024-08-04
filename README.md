@@ -1,5 +1,10 @@
 # Chess
 
+> [!WARNING]
+> Work in progress!
+
+[Lichess Profile](https://lichess.org/@/MonteCristoBot)
+
 ## Components
 
 - `engine/`: custom chess engine
