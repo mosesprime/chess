@@ -47,6 +47,7 @@ pub fn display_bitboard(bitboard: Bitboard) -> String {
     board
 }
 
+#[derive(Clone)]
 pub struct Board {
     /// Piece placement data.
     bitboards: [[Bitboard; NUM_PIECE_KINDS]; NUM_PIECE_SIDES],

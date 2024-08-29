@@ -4,6 +4,8 @@ use std::{fmt::Display, str::SplitAsciiWhitespace};
 
 use anyhow::{bail, Context};
 
+use crate::{board::fen::NUM_FEN_FIELDS, moves};
+
 #[derive(Debug, PartialEq)]
 pub enum UciCommand {
     Uci,
@@ -48,7 +50,25 @@ impl UciCommand {
             },
             Some("register") => todo!("register"),
             Some("ucinewgame") => UciCommand::UciNewGame,
-            Some("position") => todo!("position"),
+            Some("position") => match parts.next() {
+                Some("startpos") => {
+                    let mut moves = None;
+                    if parts.next() == Some("moves") {
+                        moves = Some(parts.map(|p| p.to_string()).collect())
+                    }
+                    UciCommand::Position(PositionCommand::StartPos { moves })
+                },
+                Some("fen") => {
+                    let fen = parts.clone().take(NUM_FEN_FIELDS).collect::<Vec<&str>>().join(" ");
+                    let mut parts = parts.skip(NUM_FEN_FIELDS);
+                    let mut moves: Option<Vec<String>> = None;
+                    if parts.next() == Some("moves") {
+                        moves = Some(parts.map(|p| p.to_string()).collect());
+                    }
+                    UciCommand::Position(PositionCommand::Fen { fen, moves })
+                },
+                _ => bail!("malformed position: {}", line),
+            },
             Some("go") => match parts.next() {
                 Some("searchmoves") => todo!(),
                 Some("ponder") => UciCommand::Go(GoCommand::Ponder),
@@ -90,8 +110,14 @@ impl UciCommand {
             UciCommand::Register(reg_cmd) => todo!(),
             UciCommand::UciNewGame => "ucinewgame".to_string(),
             UciCommand::Position(pos_cmd) => match pos_cmd {
-                PositionCommand::StartPos { moves } => todo!(),
-                PositionCommand::Fen { fen, moves } => todo!(),
+                PositionCommand::StartPos { moves } => match moves {
+                    Some(mv) => format!("position startpos moves {}", mv.join(" ")),
+                    None => "position startpos".to_string(),
+                },
+                PositionCommand::Fen { fen, moves } => match moves {
+                    Some(mv) => format!("position fen {} moves {}", fen, mv.join(" ")),
+                    None => format!("position fen {}", fen),
+                },
             },
             UciCommand::Go(go_cmd) => match go_cmd {
                 GoCommand::SearchMoves(s) => format!("go searchmoves {}", s.join(" ")),
