@@ -2,9 +2,28 @@
 
 use std::{fmt::Display, str::SplitAsciiWhitespace};
 
-use anyhow::{bail, Context};
+use crate::board::fen::NUM_FEN_FIELDS;
 
-use crate::{board::fen::NUM_FEN_FIELDS, moves};
+#[derive(Debug)]
+pub enum UciError {
+    ParseError,
+    EmptyEvent,
+    EmptyCommand,
+    MissingValue,
+    InvalidParameter,
+    MissingParameter,
+    UnknownCommandArg,
+    MissingCommandArgs,
+    ExcessiveCommandArgs,
+}
+
+impl Display for UciError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl std::error::Error for UciError {}
 
 #[derive(Debug, PartialEq)]
 pub enum UciCommand {
@@ -21,34 +40,66 @@ pub enum UciCommand {
     Quit,
 }
 
+impl Display for UciCommand {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let cmd = match self {
+            UciCommand::Uci => "uci".to_string(),
+            UciCommand::Debug(b) => format!("debug {b}"),
+            UciCommand::IsReady => "isready".to_string(),
+            UciCommand::SetOption(opts) => match opts {
+                UciOption::Threads(t) => format!("setoption name Threads value {t}"),
+                UciOption::Hash(h) => format!("setoption name Hash value {h}"),
+                UciOption::Ponder(b) => format!("setoption name Ponder value {b}"),
+                UciOption::MultiPV(n) => format!("setoption name MultiPV value {n}"),
+                UciOption::UciAnalyseMode(b) => format!("setoption name UciAnalyseMode value {b}"),
+            },
+            UciCommand::Register(_) => todo!(),
+            UciCommand::UciNewGame => "ucinewgame".to_string(),
+            UciCommand::Position(pos_cmd) => match pos_cmd {
+                PositionCommand::StartPos { moves } => match moves {
+                    Some(mv) => format!("position startpos moves {}", mv.join(" ")),
+                    None => "position startpos".to_string(),
+                },
+                PositionCommand::Fen { fen, moves } => match moves {
+                    Some(mv) => format!("position fen {} moves {}", fen, mv.join(" ")),
+                    None => format!("position fen {}", fen),
+                },
+            },
+            UciCommand::Go(go_cmd) => format!("go {go_cmd}"),
+            UciCommand::Stop => "stop".to_string(),
+            UciCommand::PonderHit => "ponderhit".to_string(),
+            UciCommand::Quit => "quit".to_string(),
+        };
+        write!(f, "{}", cmd)
+    }
+}
+
 impl UciCommand {
-    pub fn parse(line: String) -> anyhow::Result<Self> {
-        let mut parts = line.split_ascii_whitespace();
+    pub fn parse(s: &str) -> Result<Self, UciError> {
+        let mut parts = s.split_ascii_whitespace();
         Ok(match parts.next() {
             Some("uci") => UciCommand::Uci,
-            Some("debug") => match parts.next() {
-                Some("on") => UciCommand::Debug(true),
-                Some("off") => UciCommand::Debug(false),
-                _ => bail!("failed to parse debug command"),
-            },
+            Some("debug") => UciCommand::Debug(parts.next().ok_or(UciError::MissingValue)?.parse().map_err(|_| UciError::ParseError)?),
             Some("isready") => UciCommand::IsReady,
             Some("setoption") => {
-                if parts.next() != Some("name") {
-                    bail!("malformed setoption: {}", line);
+                match parts.next() {
+                    Some("name") => {},
+                    Some(_) => return Err(UciError::InvalidParameter),
+                    None => return Err(UciError::MissingParameter),
                 }
-                let name = parts.next().context("missing setoption name")?;
+                let name = parts.next().ok_or(UciError::MissingParameter)?;
                 let value = match parts.next() {
-                    Some("value") => Some(parts.next().context("missing setoption value")?),
+                    Some("value") => Some(parts.next().ok_or(UciError::MissingValue)?),
+                    Some(_) => return Err(UciError::InvalidParameter),
                     None => None,
-                    Some(_) => bail!("malformed setoption: {}", line),
                 };
                 match (name, value) {
-                    ("Threads", Some(v)) => UciCommand::SetOption(UciOption::Threads(v.parse::<usize>().context("failed to parse setoption threads")?)),
-                    ("Hash", Some(v)) => UciCommand::SetOption(UciOption::Hash(v.parse::<usize>().context("failed to parse setoption hash")?)),
-                    _ => bail!("malformed setoption: {}", line), 
+                    ("Threads", Some(v)) => UciCommand::SetOption(UciOption::Threads(v.parse::<usize>().map_err(|_| UciError::ParseError)?)),
+                    ("Hash", Some(v)) => UciCommand::SetOption(UciOption::Hash(v.parse::<usize>().map_err(|_| UciError::ParseError)?)),
+                    _ => return Err(UciError::InvalidParameter), 
                 }
             },
-            Some("register") => todo!("register"),
+            Some("register") => todo!("register"), // TODO: uci command register
             Some("ucinewgame") => UciCommand::UciNewGame,
             Some("position") => match parts.next() {
                 Some("startpos") => {
@@ -67,77 +118,17 @@ impl UciCommand {
                     }
                     UciCommand::Position(PositionCommand::Fen { fen, moves })
                 },
-                _ => bail!("malformed position: {}", line),
+                Some(_) => return Err(UciError::InvalidParameter),
+                None => return Err(UciError::MissingParameter),
             },
-            Some("go") => match parts.next() {
-                Some("searchmoves") => todo!(),
-                Some("ponder") => UciCommand::Go(GoCommand::Ponder),
-                Some("wtime") => todo!(),
-                Some("btime") => todo!(),
-                Some("winc") => todo!(),
-                Some("binc") => todo!(),
-                Some("movestogo") => todo!(),
-                Some("depth") => UciCommand::Go(GoCommand::Depth(parts.next().context("missing go depth value")?.parse::<usize>()?)),
-                Some("nodes") => UciCommand::Go(GoCommand::Nodes(parts.next().context("missing go nodes value")?.parse::<usize>()?)),
-                Some("mate") => todo!(),
-                Some("movetime") => UciCommand::Go(GoCommand::MoveTime(parts.next().context("missing go movetime value")?.parse::<usize>()?)),
-                Some("infinite") => UciCommand::Go(GoCommand::Infinite),
-                _ => bail!("malformed go command: {}", line),
-            },
+            Some("go") => UciCommand::Go(GoCommand::parse(&mut parts)?),
             Some("stop") => UciCommand::Stop,
             Some("ponderhit") => UciCommand::PonderHit,
             Some("quit") => UciCommand::Quit,
-            Some(s) => bail!("unable to parse uci command: {}", s),
-            None => bail!("missing uci command to parse"),
+            Some(_) => return Err(UciError::InvalidParameter),
+            None => return Err(UciError::EmptyCommand),
         })
-    }
 
-    pub fn write(&self) {
-        let msg = match self {
-            UciCommand::Uci => "uci".to_string(),
-            UciCommand::Debug(check) => match check {
-                true => "debug on".to_string(),
-                false => "debug off".to_string(),
-            },
-            UciCommand::IsReady => "isready".to_string(),
-            UciCommand::SetOption(opts) => match opts {
-                UciOption::Threads(t) => format!("setoption name Threads value {t}"),
-                UciOption::Hash(h) => format!("setoption name Hash value {h}"),
-                UciOption::Ponder(b) => format!("setoption name Ponder value {b}"),
-                UciOption::MultiPV(n) => format!("setoption name MultiPV value {n}"),
-                UciOption::UciAnalyseMode(b) => format!("setoption name UciAnalyseMode value {b}"),
-            },
-            UciCommand::Register(reg_cmd) => todo!(),
-            UciCommand::UciNewGame => "ucinewgame".to_string(),
-            UciCommand::Position(pos_cmd) => match pos_cmd {
-                PositionCommand::StartPos { moves } => match moves {
-                    Some(mv) => format!("position startpos moves {}", mv.join(" ")),
-                    None => "position startpos".to_string(),
-                },
-                PositionCommand::Fen { fen, moves } => match moves {
-                    Some(mv) => format!("position fen {} moves {}", fen, mv.join(" ")),
-                    None => format!("position fen {}", fen),
-                },
-            },
-            UciCommand::Go(go_cmd) => match go_cmd {
-                GoCommand::SearchMoves(s) => format!("go searchmoves {}", s.join(" ")),
-                GoCommand::Ponder => "go ponder".to_string(),
-                GoCommand::WTime(t) => format!("go wtime {t}"),
-                GoCommand::BTime(t) => format!("go btime {t}"),
-                GoCommand::WInc(i) => format!("go winc {i}"),
-                GoCommand::BInc(i) => format!("go binc {i}"),
-                GoCommand::MovesToGo(n) => format!("go movestogo {n}"),
-                GoCommand::Depth(n) => format!("go depth {n}"),
-                GoCommand::Nodes(n) => format!("go nodes {n}"),
-                GoCommand::Mate(n) => format!("go mate {n}"),
-                GoCommand::MoveTime(t) => format!("go movetime {t}"),
-                GoCommand::Infinite => "go infinite".to_string(),
-            },
-            UciCommand::Stop => "stop".to_string(),
-            UciCommand::PonderHit => "ponderhit".to_string(),
-            UciCommand::Quit => "quit".to_string(),
-        };
-        println!("{}", msg)
     }
 }
 
@@ -167,19 +158,93 @@ pub enum PositionCommand {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum GoCommand {
+pub struct GoCommand {
+    pub kind: GoKind,
+    pub params: Vec<GoParam>,
+}
+
+impl Display for GoCommand {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.kind)?;
+        for param in self.params.iter() {
+            write!(f, " {}", param)?;
+        }
+        Ok(())
+    }
+}
+
+impl GoCommand {
+    fn parse(parts: &mut SplitAsciiWhitespace) -> Result<Self, UciError> {
+        let kind = match parts.next().ok_or(UciError::MissingCommandArgs)? {
+            "infinite" => GoKind::Infinite,
+            "depth" => GoKind::Depth(parts.next().ok_or(UciError::MissingParameter)?.parse().map_err(|_| UciError::ParseError)?),
+            "nodes" => GoKind::Nodes(parts.next().ok_or(UciError::MissingParameter)?.parse().map_err(|_| UciError::ParseError)?),
+            "mate" => GoKind::Mate(parts.next().ok_or(UciError::MissingParameter)?.parse().map_err(|_| UciError::ParseError)?),
+            _ => return Err(UciError::UnknownCommandArg),
+        };
+        let mut params = vec![];
+        while let Some(part) = parts.next() {
+            let param = match part {
+                "ponder" => GoParam::Ponder,
+                "wtime" => GoParam::WTime(parts.next().ok_or(UciError::MissingParameter)?.parse().map_err(|_| UciError::ParseError)?),
+                "btime" => GoParam::BTime(parts.next().ok_or(UciError::MissingParameter)?.parse().map_err(|_| UciError::ParseError)?),
+                "winc" => GoParam::WInc(parts.next().ok_or(UciError::MissingParameter)?.parse().map_err(|_| UciError::ParseError)?),
+                "binc" => GoParam::BInc(parts.next().ok_or(UciError::MissingParameter)?.parse().map_err(|_| UciError::ParseError)?),
+                "movestogo" => GoParam::MovesToGo(parts.next().ok_or(UciError::MissingParameter)?.parse().map_err(|_| UciError::ParseError)?),
+                "movetime" => GoParam::MoveTime(parts.next().ok_or(UciError::MissingParameter)?.parse().map_err(|_| UciError::ParseError)?),
+                "searchmoves" => todo!(), //GoParam::SearchMoves(parts.next().ok_or(UciError::MissingParameter)?.parse().map_err(|_| UciError::ParseError)?),
+                _ => return Err(UciError::UnknownCommandArg),
+            };
+            params.push(param);
+        }
+        Ok(GoCommand { kind, params })
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum GoKind {
+    Depth(usize),
+    Nodes(usize),
+    Mate(usize),
+    Infinite,
+}
+
+impl Display for GoKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            GoKind::Depth(n) => write!(f, "depth {n}"),
+            GoKind::Nodes(n) => write!(f, "nodes {n}"),
+            GoKind::Mate(n) => write!(f, "mate {n}"),
+            GoKind::Infinite => write!(f, "infinite"),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum GoParam {
     SearchMoves(Vec<String>),
-    Ponder,
     WTime(usize),
     BTime(usize),
     WInc(usize),
     BInc(usize),
     MovesToGo(usize),
-    Depth(usize),
-    Nodes(usize),
-    Mate(usize),
     MoveTime(usize),
-    Infinite,
+    Ponder,
+}
+
+impl Display for GoParam {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            GoParam::SearchMoves(m) => write!(f, "searchmoves {}", m.join(" ")),
+            GoParam::WTime(n) => write!(f, "wtime {n}"),
+            GoParam::BTime(n) => write!(f, "btime {n}"),
+            GoParam::WInc(n) => write!(f, "winc {n}"),
+            GoParam::BInc(n) => write!(f, "binc {n}"),
+            GoParam::MovesToGo(n) => write!(f, "movestogo {n}"),
+            GoParam::MoveTime(n) => write!(f, "movetime {n}"),
+            GoParam::Ponder => write!(f, "ponder"),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -197,62 +262,18 @@ pub enum UciEvent {
     Option(OptionEvent),
 }
 
-impl UciEvent {
-    pub fn parse(line: String) -> anyhow::Result<Self> {
-        let mut parts = line.split_ascii_whitespace();
-        Ok(match parts.next() {
-            Some("id") => match parts.next() {
-                Some("name") => match parts.next() {
-                    Some(name) => UciEvent::Id(IdEvent::Name(name.to_string())),
-                    None => bail!("missing id name value"),
-                },
-                Some("author") => match parts.next() {
-                    Some(author) => UciEvent::Id(IdEvent::Author(author.to_string())),
-                    None => bail!("missing id author value"),
-                },
-                Some(s) => bail!("invalid id argument: {}", s),
-                None => bail!("missing id argument"),
-            },
-            Some("uciok") => UciEvent::UciOk,
-            Some("readyok") => UciEvent::ReadyOk,
-            Some("bestmove") => todo!("bestmove"),
-            Some("copyprotection") => todo!("copyprotection"),
-            Some("registration") => todo!("registration"),
-            Some("info") => todo!("info"),
-            Some("option") => {
-                if parts.next() != Some("name") {
-                    bail!("malformed option name: {}", line);
-                }
-                let name = parts.next().context("missing option name")?;
-                if parts.next() != Some("type") {
-                    bail!("malformed option type: {}", line);
-                }
-                let ty = parts.next().context("missing option type")?;
-                match (name, ty) {
-                    ("Threads", "spin") => UciEvent::Option(OptionEvent::Threads(Spin::parse(&mut parts)?)),
-                    ("Hash", "spin") => UciEvent::Option(OptionEvent::Hash(Spin::parse(&mut parts)?)),
-                    ("Ponder", "check") => UciEvent::Option(OptionEvent::Ponder(Check::parse(&mut parts)?)),
-                    ("MultiPV", "spin") => UciEvent::Option(OptionEvent::MultiPV(Spin::parse(&mut parts)?)),
-                    ("UciAnalyseMode", "check") => UciEvent::Option(OptionEvent::UciAnalyseMode(Check::parse(&mut parts)?)),
-                    _ => bail!("malformed option: {}", line),
-                }
-            },
-            Some(s) => bail!("unable to parse uci event: {}", s),
-            None => bail!("missing uci event to parse"),
-        })
-    }
-
-    pub fn write(&self) {
-         let msg = match self {
+impl Display for UciEvent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let msg = match self {
             UciEvent::Id(id_event) => match id_event {
                 IdEvent::Name(name) => format!("id name {}", name),
                 IdEvent::Author(author) => format!("id author {}", author),
             },
             UciEvent::UciOk => "uciok".to_string(),
             UciEvent::ReadyOk => "readyok".to_string(),
-            UciEvent::BestMove { best, ponder } => todo!("bestmove"),
-            UciEvent::CopyProtection => todo!("copyprotection"),
-            UciEvent::Registration => todo!("registration"),
+            UciEvent::BestMove { best, ponder } => todo!("bestmove"), // TODO: uci event bestmove
+            UciEvent::CopyProtection => todo!("copyprotection"), // TODO: uci event copyprotection
+            UciEvent::Registration => todo!("registration"), // TODO: uci event registration
             UciEvent::Info(info_event) => match info_event {
                 InfoEvent::String(s) => format!("info string {}", s),
                 _ => todo!(),
@@ -265,7 +286,58 @@ impl UciEvent {
                 OptionEvent::UciAnalyseMode(a) => format!("option name UciAnalyseMode type check {a}"),
             },
         };
-        println!("{}", msg)
+        write!(f, "{}", msg)
+    }
+}
+
+
+impl UciEvent {
+    pub fn parse(line: String) -> Result<Self, UciError> {
+        let mut parts = line.split_ascii_whitespace();
+        Ok(match parts.next() {
+            Some("id") => match parts.next() {
+                Some("name") => match parts.next() {
+                    Some(name) => UciEvent::Id(IdEvent::Name(name.to_string())),
+                    None => return Err(UciError::MissingValue),
+                },
+                Some("author") => match parts.next() {
+                    Some(author) => UciEvent::Id(IdEvent::Author(author.to_string())),
+                    None => return Err(UciError::MissingValue),
+                },
+                Some(_) => return Err(UciError::InvalidParameter),
+                None => return Err(UciError::MissingParameter),
+            },
+            Some("uciok") => UciEvent::UciOk,
+            Some("readyok") => UciEvent::ReadyOk,
+            Some("bestmove") => todo!("bestmove"), // TODO: uci event bestmove
+            Some("copyprotection") => todo!("copyprotection"), // TODO: uci event copyprotection
+            Some("registration") => todo!("registration"), // TODO: uci event registration
+            Some("info") => todo!("info"), // TODO: uci event info
+            Some("option") => {
+                match parts.next() {
+                    Some("name") => {},
+                    Some(_) => return Err(UciError::InvalidParameter),
+                    None => return Err(UciError::MissingParameter),
+                }
+                let name = parts.next().ok_or(UciError::MissingValue)?;
+                match parts.next() {
+                    Some("type") => {},
+                    Some(_) => return Err(UciError::InvalidParameter),
+                    None => return Err(UciError::MissingParameter),
+                }
+                let ty = parts.next().ok_or(UciError::MissingValue)?;
+                match (name, ty) {
+                    ("Threads", "spin") => UciEvent::Option(OptionEvent::Threads(Spin::parse(&mut parts)?)),
+                    ("Hash", "spin") => UciEvent::Option(OptionEvent::Hash(Spin::parse(&mut parts)?)),
+                    ("Ponder", "check") => UciEvent::Option(OptionEvent::Ponder(Check::parse(&mut parts)?)),
+                    ("MultiPV", "spin") => UciEvent::Option(OptionEvent::MultiPV(Spin::parse(&mut parts)?)),
+                    ("UciAnalyseMode", "check") => UciEvent::Option(OptionEvent::UciAnalyseMode(Check::parse(&mut parts)?)),
+                    _ => return Err(UciError::InvalidParameter),
+                }
+            },
+            Some(_) => return Err(UciError::InvalidParameter),
+            None => return Err(UciError::EmptyEvent),
+        })
     }
 }
 
@@ -319,19 +391,19 @@ pub struct Spin {
 }
 
 impl Spin {
-    fn parse(parts: &mut SplitAsciiWhitespace) -> anyhow::Result<Self> {
-        if parts.next() != Some("default") {
-            bail!("malformed spin default");
+    fn parse(parts: &mut SplitAsciiWhitespace) -> Result<Self, UciError> {
+        if parts.next().ok_or(UciError::MissingParameter)? != "default" {
+            return Err(UciError::InvalidParameter);
         }
-        let default = parts.next().context("missing spin default")?.parse::<usize>().context("failed to parse spin default")?;
-        if parts.next() != Some("min") {
-            bail!("malformed spin min");
+        let default = parts.next().ok_or(UciError::MissingValue)?.parse::<usize>().map_err(|_| UciError::ParseError)?;
+        if parts.next().ok_or(UciError::MissingParameter)? != "min" {
+            return Err(UciError::InvalidParameter);
         }
-        let min = parts.next().context("missing spin min")?.parse::<usize>().context("failed to parse spin min")?;
-        if parts.next() != Some("max") {
-            bail!("malformed spin max");
+        let min = parts.next().ok_or(UciError::MissingValue)?.parse::<usize>().map_err(|_| UciError::ParseError)?;
+        if parts.next().ok_or(UciError::MissingParameter)? != "max" {
+            return Err(UciError::InvalidParameter);
         }
-        let max = parts.next().context("missing spin max")?.parse::<usize>().context("failed to parse spin max")?;
+        let max = parts.next().ok_or(UciError::MissingValue)?.parse::<usize>().map_err(|_| UciError::ParseError)?;
         Ok(Spin { default, min , max })
     }
 }
@@ -348,11 +420,11 @@ pub struct Check {
 }
 
 impl Check {
-    fn parse(parts: &mut SplitAsciiWhitespace) -> anyhow::Result<Self> {
-        if parts.next() != Some("default") {
-            bail!("malformed check default");
+    fn parse(parts: &mut SplitAsciiWhitespace) -> Result<Self, UciError> {
+        if parts.next().ok_or(UciError::MissingParameter)? != "default" {
+            return Err(UciError::InvalidParameter);
         }
-        Ok(Check { default: parts.next().context("missing check default")?.parse::<bool>().context("failed to parse check")? })
+        Ok(Check { default: parts.next().ok_or(UciError::MissingValue)?.parse::<bool>().map_err(|_| UciError::ParseError)? })
     }
 }
 
