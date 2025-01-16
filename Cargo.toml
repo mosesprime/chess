@@ -1,9 +1,9 @@
 [workspace]
 resolver = "2"
-members = [ "core", "engine", "game" ]
+members = [ "core", "engine" ]
 
-[profile.dev]
-opt-level = 1
+#[profile.dev]
+#opt-level = 1
 
 [profile.release]
 lto = true
