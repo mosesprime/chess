@@ -25,18 +25,34 @@ impl Display for UciError {
 
 impl std::error::Error for UciError {}
 
+/// Inputs to the engine.
 #[derive(Debug, PartialEq)]
 pub enum UciCommand {
+    /// Tell engine to use UCI. Engine must identify itself with [UciEvent::Id] and send [UciEvent::Option]
+    /// to inform the GUI what settings the engine supports. Finally the engine should send
+    /// [UciEvent::UciOk] to acknoledge UCI mode.
     Uci,
+    /// Enable/disable debug info being sent to the GUI via [UciEvent::Info].
     Debug(bool),
+    /// Syncronize the engine and GUI. Engine should respond with [UciEvent::ReadyOk].
     IsReady,
+    /// Change an engine setting.
     SetOption(UciOption),
+    ///
     Register(RegisterCommand),
+    /// Engine should prepare to evaluate a different game than the current one.
     UciNewGame,
+    /// Set the engine to evaluate the given position. Could be a ply down from the currently held
+    /// position, or an entirely different game. In the later case, a "ucinewgame" is prefered but
+    /// not always given by the GUI.
     Position(PositionCommand),
+    /// Start calculating on the current position.
     Go(GoCommand),
+    /// Stop current search ASAP. Engine should send "bestmove" and "ponder" if able.
     Stop,
+    /// User has played the expected "ponder" move. Continue ponder search as a normal search.
     PonderHit,
+    /// Terminate the engine ASAP.
     Quit,
 }
 
@@ -247,18 +263,29 @@ impl Display for GoParam {
     }
 }
 
+/// Outputs from the engine.
 #[derive(Debug)]
 pub enum UciEvent {
+    /// Sent to the GUI after receiving a [UciCommand::Uci] to self-identify the engine.
     Id(IdEvent),
+    /// Acknoledge [UciCommand::Uci].
     UciOk,
+    /// Acknoledge [UciCommand::IsReady] as soon as engine is ready to accept new commands.
     ReadyOk,
+    /// Report the results of a search. Does not start pondering automatically.
     BestMove {
+        /// Most advantageous move to make.
         best: String,
+        /// Next move that the engine would like to continue working on.
         ponder: Option<String>,
     },
+    /// 
     CopyProtection,
+    ///
     Registration,
+    /// Report some information to the GUI.
     Info(InfoEvent),
+    /// Inform the GUI of what engine settings can be changed.
     Option(OptionEvent),
 }
 
@@ -271,13 +298,13 @@ impl Display for UciEvent {
             },
             UciEvent::UciOk => "uciok".to_string(),
             UciEvent::ReadyOk => "readyok".to_string(),
-            UciEvent::BestMove { best, ponder } => todo!("bestmove"), // TODO: uci event bestmove
+            UciEvent::BestMove { best, ponder } => match ponder {
+                None => format!("bestmove {best}"),
+                Some(ponder) => format!("bestmove {best} ponder {ponder}")
+            },
             UciEvent::CopyProtection => todo!("copyprotection"), // TODO: uci event copyprotection
             UciEvent::Registration => todo!("registration"), // TODO: uci event registration
-            UciEvent::Info(info_event) => match info_event {
-                InfoEvent::String(s) => format!("info string {}", s),
-                _ => todo!(),
-            },
+            UciEvent::Info(info_event) => format!("info {info_event}"),
             UciEvent::Option(opt_event) => match opt_event {
                 OptionEvent::Threads(t) => format!("option name Threads type spin {t}"),
                 OptionEvent::Hash(h) => format!("option name Hash type spin {h}"),
@@ -289,7 +316,6 @@ impl Display for UciEvent {
         write!(f, "{}", msg)
     }
 }
-
 
 impl UciEvent {
     pub fn parse(line: String) -> Result<Self, UciError> {
@@ -348,30 +374,89 @@ pub enum IdEvent {
 }
 
 #[derive(Debug)]
-pub enum InfoEvent {
-    Depth(usize),
-    SelDepth(usize),
-    Time(usize),
-    Nodes(usize),
-    PV(Vec<String>),
-    MultiPV(usize),
-    ScoreCp(usize),
-    ScoreMate(usize),
-    ScoreLowerBound,
-    ScoreUpperBound,
-    CurrMove(String),
-    CurrMoveNumber(usize),
-    HashFull(usize),
-    Nps(usize),
-    TbHits(usize),
-    SbHits(usize),
-    CpuLoad(usize),
-    String(String),
-    Refutaion(Vec<String>),
-    CurrLine {
-        cpu_num: usize,
-        moves: Vec<String>,
+pub struct InfoEvent {
+    depth: Option<usize>,
+    sel_depth: Option<usize>,
+    time: Option<usize>,
+    nodes: Option<usize>,
+    pv: Vec<Box<str>>,
+    multi_pv: Option<usize>,
+    score: Option<ScoreEvent>,
+    //curr_move: String,
+    //curr_move_num: Option<usize>,
+    //hash_full: Option<usize>,
+    nps: Option<usize>,
+    //tb_hits: Option<usize>,
+    //sb_hits: Option<usize>,
+    //cpu_load: Option<usize>,
+    string: Box<str>,
+    //refutation: Vec<String>,
+    // (cpu_num, moves)
+    //curr_line: Option<(usize, Vec<String>)>,
+}
+
+impl Display for InfoEvent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(depth) = self.depth {
+            write!(f, "depth {} ", depth)?
+        }
+        if let Some(sel_depth) = self.sel_depth {
+            write!(f, "seldepth {} ", sel_depth)?
+        }
+        if let Some(time) = self.time {
+            write!(f, "time {} ", time)?
+        }
+        if let Some(nodes) = self.nodes {
+            write!(f, "nodes {} ", nodes)?
+        }
+        if self.pv.len() > 0 {
+            write!(f, "pv {} ", self.pv.join(" "))?
+        }
+        if let Some(multi_pv) = self.multi_pv {
+            write!(f, "multipv {} ", multi_pv)?
+        }
+        if let Some(score) = &self.score {
+            write!(f, "score {}", score)?
+        }
+        if let Some(nps) = self.nps {
+            write!(f, "nps {} ", nps)?
+        }
+        if self.string.len() > 0 {
+            write!(f, "string {} ", self.string)?
+        }
+        // TODO: additional InfoEvent here?
+        Ok(())
     }
+}
+
+#[derive(Debug)]
+pub struct ScoreEvent {
+    cp: Option<usize>,
+    mate: Option<usize>,
+    bound: ScoreEventBound,
+}
+
+impl Display for ScoreEvent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(cp) = self.cp {
+            write!(f, "cp {} ", cp)?
+        }
+        if let Some(mate) = self.mate {
+            write!(f, "mate {} ", mate)?
+        }
+        match self.bound {
+            ScoreEventBound::None => Ok(()),
+            ScoreEventBound::Upper => write!(f, "upperbound "),
+            ScoreEventBound::Lower => write!(f, "lowerbound "),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum ScoreEventBound {
+    None,
+    Upper,
+    Lower,
 }
 
 #[derive(Debug)]

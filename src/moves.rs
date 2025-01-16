@@ -9,7 +9,8 @@ pub mod pawn;
 pub mod queen;
 pub mod rook;
 
-/// generate pseudo-legal moves
+/// Generate pseudo-legal moves. Does not account for illegal moves like moving a pinned piece or
+/// castling whil under attack.
 pub fn generate_moves(board: &Board) -> MoveList {
     let mut moves = MoveList::new();
     moves.add_pawn_moves(board);
@@ -49,6 +50,7 @@ impl ShortMove {
         Self(src.0 as u16 | ((dest.0 as u16) << Self::DEST_OFFSET) | (flags << Self::FLAGS_OFFSET))
     }
 
+    /// Checks validity of [ShortMove]. Does not necessarily check move for legality.
     pub fn is_valid(&self) -> bool {
         debug_assert!(self.src() != self.dest(), "src and dest should not be the same");
         debug_assert!((self.is_en_pasant() && self.is_capturing()) && self.is_capturing(), "all en pasant should also be captures"); 
@@ -65,7 +67,7 @@ impl ShortMove {
     }
 
     pub fn promoted(&self) -> Option<Piece> {
-        // TODO: ensure that captures and promotions dont conflict
+        // TODO: ensure that flags dont conflict
         match self.0 & Self::PROMOTION_MASK {
             Self::KNIGHT_PROMOTION_FLAG => Some(Piece::Knight),
             Self::BISHOP_PROMOTION_FLAG => Some(Piece::Bishop),
@@ -88,8 +90,8 @@ impl ShortMove {
     }
 
     pub fn set_src(&mut self, src: Square) {
-        self.0 &= !0x3F;
-        self.0 |= src.0 as u16;
+        self.0 &= !Self::FROM_MASK;
+        self.0 |= (src.0 << Self::FROM_OFFSET) as u16;
     }
 
     pub fn set_dest(&mut self, dest: Square) {
@@ -132,7 +134,7 @@ pub struct MoveList {
 impl MoveList {
     pub fn new() -> Self {
         Self { 
-            // PERF: IDK if this is actually faster than zeroed
+            // PERF: IDK if this is actually faster than zeroed?
             list: unsafe { [std::mem::MaybeUninit::uninit().assume_init(); MAX_LEGAL_MOVES] },
             count: 0,
         }
@@ -162,7 +164,7 @@ impl MoveList {
 
     pub fn swap(&mut self, a: usize, b: usize) {
         debug_assert!((a <= self.count) && (b <= self.count), "index out of bounds");
-        self.list.swap(a, b)
+        self.list.swap(a, b) // PERF: use nightly swap_unchecked?
     }
 
     pub fn into_iter(self) -> impl Iterator<Item = ShortMove> {
