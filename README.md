@@ -3,7 +3,10 @@
 > [!WARNING]
 > Work in progress!
 
+## Lichess Bot
+
 [Lichess Profile](https://lichess.org/@/MonteCristoBot)
+[Lichess API Docs](https://lichess.org/api)
 
 ## Getting Started
 

@@ -1,6 +1,7 @@
-use chess::{board::Board, uci::{UciCommand, UciEvent, UciOption}};
+use chess::{board::Board, uci::{GoKind, UciCommand, UciEvent, UciOption}};
 use engine::{Engine, EngineConfig};
 mod engine;
+mod search;
 
 fn main() {
     let config = EngineConfig::default();
@@ -16,7 +17,7 @@ fn main() {
             },
             Ok(UciCommand::Debug(b)) => engine.config.enable_debug = b,
             Ok(UciCommand::IsReady) => {
-                todo!("uci isready");
+                // TODO: ensure engine is ready
                 println!("{}", UciEvent::ReadyOk);
             },
             Ok(UciCommand::SetOption(opt)) => match opt {
@@ -29,7 +30,12 @@ fn main() {
             Ok(UciCommand::Register(reg)) => todo!(), // TODO: idk if this is needed
             Ok(UciCommand::UciNewGame) => engine.reset(Board::default()),
             Ok(UciCommand::Position(pos)) => todo!(),
-            Ok(UciCommand::Go(go)) => todo!(),
+            Ok(UciCommand::Go(go)) => match go.kind {
+                GoKind::Infinite => todo!(),
+                GoKind::Mate(m) => todo!(),
+                GoKind::Depth(d) => todo!(),
+                GoKind::Nodes(n) => todo!(),
+            },
             Ok(UciCommand::Stop) => {
                 let (best, ponder) = engine.stop();
                 println!("{}", UciEvent::BestMove { best, ponder });
