@@ -12,11 +12,11 @@
 
 Requires the [Rust](https://www.rust-lang.org/) toolchain.
 
+### Chess Core
+
+TODO
+
 ### Chess Engine
 ```
 cargo build --release --all-features
-```
-
-### Chess GUI
-```
 ```

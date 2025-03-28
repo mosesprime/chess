@@ -1,5 +1,5 @@
-use chess::{board::Board, uci::{IdEvent, OptionEvent, UciEvent}};
-
+use chess_core::board::Board;
+use crate::uci::{IdEvent, OptionEvent, UciEvent};
 use crate::search::{SearchTree, Searching};
 
 /// Default size of hash table in MB.
@@ -53,9 +53,9 @@ impl Engine {
     pub(crate) fn report_about(&self) {
         println!("{}", UciEvent::Id(IdEvent::Name(ENGINE_NAME.to_string())));
         println!("{}", UciEvent::Id(IdEvent::Author(ENGINE_AUTHOR.to_string())));
-        println!("{}", UciEvent::Option(OptionEvent::Threads(chess::uci::Spin { default: DEFAULT_NUM_THREADS, min: 1, max: self.config.max_threads })));
-        println!("{}", UciEvent::Option(OptionEvent::Hash(chess::uci::Spin { default: DEFAULT_HASH_CAPACITY, min: 1, max: usize::MAX })));
-        println!("{}", UciEvent::Option(OptionEvent::Ponder(chess::uci::Check { default: DEFAULT_ENABLE_PONDER })))
+        println!("{}", UciEvent::Option(OptionEvent::Threads(crate::uci::Spin { default: DEFAULT_NUM_THREADS, min: 1, max: self.config.max_threads })));
+        println!("{}", UciEvent::Option(OptionEvent::Hash(crate::uci::Spin { default: DEFAULT_HASH_CAPACITY, min: 1, max: usize::MAX })));
+        println!("{}", UciEvent::Option(OptionEvent::Ponder(crate::uci::Check { default: DEFAULT_ENABLE_PONDER })))
     }
 
     pub fn reset(&mut self, board: Board) {

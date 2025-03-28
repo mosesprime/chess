@@ -5,7 +5,7 @@ use anyhow::{bail, Context};
 use super::{file::{File, NUM_BOARD_FILES}, piece::{Piece, Side}, rank::{Rank, NUM_BOARD_RANKS}, square::Square, Board};
 
 pub const DEFAULT_FEN_START: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-pub(crate) const NUM_FEN_FIELDS: usize = 6;
+pub const NUM_FEN_FIELDS: usize = 6;
 
 const WHITE_KING_SIDE_CASTLING: u8 = 1;
 const WHITE_QUEEN_SIDE_CASTLING: u8 = 2;

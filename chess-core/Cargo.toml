@@ -1,0 +1,14 @@
+[package]
+name = "chess-core"
+version = "0.1.0"
+edition = "2024"
+build = "src/build.rs"
+
+[profile.release.build-override]
+opt-level = 3
+
+[dependencies]
+anyhow = "1.0.95" # TODO: remove dep in lib
+
+[build-dependencies]
+anyhow = "1.0.95"

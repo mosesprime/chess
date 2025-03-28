@@ -1,4 +1,4 @@
-use chess::{board::{piece::{NUM_PIECE_KINDS, NUM_PIECE_SIDES}, Board}, moves::{MoveList, ShortMove}};
+use chess_core::{board::{piece::{NUM_PIECE_KINDS, NUM_PIECE_SIDES}, Board}, moves::{MoveList, ShortMove}};
 
 pub enum Searching {
     Infinite,

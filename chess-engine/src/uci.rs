@@ -2,7 +2,7 @@
 
 use std::{fmt::Display, str::SplitAsciiWhitespace};
 
-use crate::board::fen::NUM_FEN_FIELDS;
+use chess_core::board::fen::NUM_FEN_FIELDS;
 
 #[derive(Debug)]
 pub enum UciError {

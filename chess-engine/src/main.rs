@@ -1,7 +1,9 @@
-use chess::{board::Board, uci::{GoKind, UciCommand, UciEvent, UciOption}};
+use chess_core::board::Board;
 use engine::{Engine, EngineConfig};
+use uci::{GoKind, UciCommand, UciEvent, UciOption};
 mod engine;
 mod search;
+mod uci;
 
 fn main() {
     let config = EngineConfig::default();
